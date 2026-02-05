@@ -441,6 +441,23 @@ function renderThumbnail(album, images) {
     }
   });
   
+  // 辅助函数：平滑滚动缩略图条到选中位置
+  const scrollThumbBarToIndex = (index) => {
+    const thumb = thumbBar.querySelector(`[data-index="${index}"]`);
+    if (!thumb) return;
+    
+    const thumbLeft = thumb.offsetLeft;
+    const thumbWidth = thumb.offsetWidth;
+    const barWidth = thumbBar.clientWidth;
+    const barScrollLeft = thumbBar.scrollLeft;
+    
+    // 计算要滚动到的位置，使缩图在中央
+    const targetScroll = thumbLeft + thumbWidth / 2 - barWidth / 2;
+    
+    // 使用 smooth 滚动（需要 CSS scroll-behavior: smooth）
+    thumbBar.scroll({ left: targetScroll, behavior: "smooth" });
+  };
+  
   images.forEach((image, i) => {
     const thumb = document.createElement("img");
     thumb.className = i === 0 ? "thumbnail active" : "thumbnail";
@@ -455,8 +472,8 @@ function renderThumbnail(album, images) {
       thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
         t.classList.toggle("active", j === i);
       });
-      // 自动滚动到选中缩略图
-      thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      // 自动滚动缩略图条到选中位置
+      scrollThumbBarToIndex(i);
     });
     thumbBar.appendChild(thumb);
   });
@@ -490,11 +507,8 @@ function renderThumbnail(album, images) {
     thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
       t.classList.toggle("active", j === currentIndex);
     });
-    // 自动滚动到当前缩略图
-    const activeThumb = thumbBar.querySelector(`[data-index="${currentIndex}"]`);
-    if (activeThumb) {
-      activeThumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
+    // 自動滾動縮圖條到當前位置
+    scrollThumbBarToIndex(currentIndex);
   });
   mainImage.style.cursor = "pointer";
   
