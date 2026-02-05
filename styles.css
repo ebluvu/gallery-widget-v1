@@ -831,7 +831,6 @@ h2, h3 {
   overflow-y: hidden;
   padding: 0 8px;
   justify-content: center;
-  scroll-behavior: smooth;
 }
 
 .thumbnail-bar::-webkit-scrollbar {
