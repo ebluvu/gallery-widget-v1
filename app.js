@@ -14,6 +14,7 @@ const state = {
 };
 
 let pickr = null;
+let loadAlbumsRun = 0;
 
 // 等待 Pickr 库加载完成
 async function waitForPickr(timeout = 5000) {
@@ -99,6 +100,7 @@ function renderAuth() {
 }
 
 async function loadAlbums() {
+  const runId = ++loadAlbumsRun;
   ui.albumList.innerHTML = "";
   if (!state.user) {
     const info = document.createElement("div");
@@ -113,6 +115,10 @@ async function loadAlbums() {
     .select("id, title, created_at")
     .eq("owner_id", state.user.id)
     .order("created_at", { ascending: false });
+
+  if (runId !== loadAlbumsRun) {
+    return;
+  }
 
   if (error) {
     setStatus(error.message);
