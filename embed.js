@@ -32,7 +32,8 @@ async function loadAlbum(albumId) {
 
   ui.title.textContent = album.title || "Gallery";
   ui.meta.textContent = `主題: ${album.theme === 'slideshow' ? '幻燈片' : '縮略圖'}`;
-  document.body.style.setProperty("--bg", album.background_color || "#0c1117");
+  const bgColor = album.background_color || "#0c1117";
+  document.body.style.background = bgColor;
   ui.grid.className = `embed-grid ${album.theme || "slideshow"}`;
 
   const { data: images, error: imageError } = await supabase

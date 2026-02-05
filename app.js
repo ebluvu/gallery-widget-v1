@@ -29,8 +29,6 @@ const ui = {
   embedPreview: document.getElementById("embedPreview"),
   themeSelect: document.getElementById("themeSelect"),
   bgColor: document.getElementById("bgColor"),
-  bgOpacity: document.getElementById("bgOpacity"),
-  opacityValue: document.getElementById("opacityValue"),
   addNewSelect: document.getElementById("addNewSelect"),
   imageList: document.getElementById("imageList"),
   status: document.getElementById("status"),
@@ -44,34 +42,6 @@ function logUpload(message) {
   const p = document.createElement("p");
   p.textContent = message;
   ui.uploadLog.prepend(p);
-}
-
-function hexToRgba(hex, opacity) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
-}
-
-function rgbaToHexAndOpacity(rgba) {
-  if (!rgba || !rgba.startsWith('rgba')) {
-    return { hex: rgba || '#101828', opacity: 100 };
-  }
-  const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-  if (!match) {
-    return { hex: '#101828', opacity: 100 };
-  }
-  const r = parseInt(match[1]).toString(16).padStart(2, '0');
-  const g = parseInt(match[2]).toString(16).padStart(2, '0');
-  const b = parseInt(match[3]).toString(16).padStart(2, '0');
-  const opacity = match[4] ? Math.round(parseFloat(match[4]) * 100) : 100;
-  return { hex: `#${r}${g}${b}`, opacity };
-}
-
-function getCurrentBackgroundColor() {
-  const hex = ui.bgColor.value;
-  const opacity = ui.bgOpacity.value;
-  return hexToRgba(hex, opacity);
 }
 
 function newId() {
@@ -144,13 +114,11 @@ async function loadAlbums() {
 
   data.forEach((album) => {
     const item = document.createElement("div");
-    item.style.display = "flex";
-    item.style.gap = "8px";
-    item.style.alignItems = "center";
+    item.className = "album-item";
     
     const btn = document.createElement("button");
     btn.textContent = album.title || "未命名";
-    btn.style.flex = "1";
+    btn.className = "album-btn";
     if (state.album && state.album.id === album.id) {
       btn.classList.add("active");
     }
@@ -158,10 +126,8 @@ async function loadAlbums() {
     
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "×";
-    deleteBtn.className = "btn ghost";
-    deleteBtn.style.padding = "8px 12px";
-    deleteBtn.style.fontSize = "18px";
-    deleteBtn.style.lineHeight = "1";
+    deleteBtn.className = "btn ghost album-delete-btn";
+    deleteBtn.title = "刪除相簿";
     deleteBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (confirm(`確定要刪除相簿「${album.title || '未命名'}」嗎？這會刪除所有圖片。`)) {
@@ -182,7 +148,7 @@ async function createAlbum() {
     title,
     owner_id: state.user ? state.user.id : null,
     theme: "slideshow",
-    background_color: getCurrentBackgroundColor(),
+    background_color: ui.bgColor.value.trim() || "#101828",
     add_new_first: false,
   };
 
@@ -200,10 +166,7 @@ async function createAlbum() {
   state.album = data;
   ui.albumTitle.value = data.title || "";
   ui.themeSelect.value = data.theme || "slideshow";
-  const { hex, opacity } = rgbaToHexAndOpacity(data.background_color);
-  ui.bgColor.value = hex;
-  ui.bgOpacity.value = opacity;
-  ui.opacityValue.textContent = `${opacity}%`;
+  ui.bgColor.value = data.background_color || "#101828";
   ui.addNewSelect.value = data.add_new_first ? "first" : "last";
   await loadImages();
   updateEmbed();
@@ -226,10 +189,7 @@ async function loadAlbum(albumId) {
   state.album = data;
   ui.albumTitle.value = data.title || "";
   ui.themeSelect.value = data.theme || "slideshow";
-  const { hex, opacity } = rgbaToHexAndOpacity(data.background_color);
-  ui.bgColor.value = hex;
-  ui.bgOpacity.value = opacity;
-  ui.opacityValue.textContent = `${opacity}%`;
+  ui.bgColor.value = data.background_color || "#101828";
   ui.addNewSelect.value = data.add_new_first ? "first" : "last";
   await loadImages();
   updateEmbed();
@@ -297,6 +257,8 @@ function renderImages() {
     // 拖拽事件
     card.addEventListener("dragstart", handleDragStart);
     card.addEventListener("dragover", handleDragOver);
+    card.addEventListener("dragenter", handleDragEnter);
+    card.addEventListener("dragleave", handleDragLeave);
     card.addEventListener("drop", handleDrop);
     card.addEventListener("dragend", handleDragEnd);
 
@@ -311,22 +273,30 @@ let draggedElement = null;
 
 function handleDragStart(e) {
   draggedElement = e.currentTarget;
-  e.currentTarget.style.opacity = "0.5";
+  e.currentTarget.style.opacity = "0.4";
   e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/html", e.currentTarget.innerHTML);
+}
+
+function handleDragEnter(e) {
+  if (e.currentTarget !== draggedElement) {
+    e.currentTarget.style.borderTop = "3px solid var(--accent)";
+  }
+}
+
+function handleDragLeave(e) {
+  e.currentTarget.style.borderTop = "";
 }
 
 function handleDragOver(e) {
-  if (e.preventDefault) {
-    e.preventDefault();
-  }
+  e.preventDefault();
   e.dataTransfer.dropEffect = "move";
   return false;
 }
 
 function handleDrop(e) {
-  if (e.stopPropagation) {
-    e.stopPropagation();
-  }
+  e.stopPropagation();
+  e.preventDefault();
 
   if (draggedElement !== e.currentTarget) {
     const fromIndex = parseInt(draggedElement.dataset.index);
@@ -343,11 +313,18 @@ function handleDrop(e) {
     renderImages();
   }
 
+  e.currentTarget.style.borderTop = "";
   return false;
 }
 
 function handleDragEnd(e) {
   e.currentTarget.style.opacity = "";
+  e.currentTarget.style.borderTop = "";
+  
+  // 清除所有拖拽样式
+  document.querySelectorAll(".image-card").forEach(card => {
+    card.style.borderTop = "";
+  });
 }
 
 async function updateImageOrder() {
@@ -446,7 +423,7 @@ async function updateSettings() {
   const payload = {
     title: ui.albumTitle.value.trim() || "未命名",
     theme: ui.themeSelect.value,
-    background_color: getCurrentBackgroundColor(),
+    background_color: ui.bgColor.value.trim() || "#101828",
     add_new_first: ui.addNewSelect.value === "first",
   };
 
@@ -592,21 +569,9 @@ ui.fileInput.addEventListener("change", (event) => uploadImages([...event.target
 ui.albumTitle.addEventListener("change", updateSettings);
 ui.themeSelect.addEventListener("change", updateSettings);
 ui.bgColor.addEventListener("change", updateSettings);
-ui.bgOpacity.addEventListener("input", () => {
-  ui.opacityValue.textContent = `${ui.bgOpacity.value}%`;
-  updateSettings();
-});
 ui.addNewSelect.addEventListener("change", updateSettings);
 ui.embedCode.addEventListener("click", () => ui.embedCode.select());
 ui.shareLink.addEventListener("click", () => ui.shareLink.select());
-
-// 預設顏色按鈕
-document.querySelectorAll(".preset-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    ui.bgColor.value = btn.dataset.color;
-    updateSettings();
-  });
-});
 
 supabase.auth.onAuthStateChange((event, session) => {
   state.user = session?.user || null;

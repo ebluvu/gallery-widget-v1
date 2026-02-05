@@ -161,26 +161,6 @@ h2, h3 {
   color: var(--muted);
 }
 
-.preset-colors {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.preset-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 2px solid rgba(148, 163, 184, 0.3);
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-.preset-btn:hover {
-  transform: scale(1.1);
-  border-color: var(--accent);
-}
-
 .btn {
   padding: 12px 18px;
   border-radius: 999px;
@@ -241,6 +221,43 @@ h2, h3 {
 .list {
   display: grid;
   gap: 12px;
+}
+
+.album-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.album-btn {
+  flex: 1;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.album-btn.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.album-delete-btn {
+  padding: 8px 12px !important;
+  font-size: 20px;
+  line-height: 1;
+  min-width: 40px;
+  border-radius: 8px !important;
+}
+
+.album-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgb(239, 68, 68);
+  color: rgb(239, 68, 68);
 }
 
 .list button {

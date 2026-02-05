@@ -102,33 +102,15 @@
             </select>
           </div>
           <div>
+            <label class="label">背景顏色 (支援 rgba)</label>
+            <input id="bgColor" class="field" type="text" value="#101828" placeholder="#hex 或 rgba(r,g,b,a)" />
+          </div>
+          <div>
             <label class="label">新圖片位置</label>
             <select id="addNewSelect" class="field">
               <option value="last">最後</option>
               <option value="first">最前</option>
             </select>
-          </div>
-        </div>
-        <div style="margin-top: 1rem;">
-          <label class="label">背景顏色</label>
-          <div class="preset-colors">
-            <button class="preset-btn" data-color="#0c1117" style="background: #0c1117;" title="深黑"></button>
-            <button class="preset-btn" data-color="#1e293b" style="background: #1e293b;" title="藍黑"></button>
-            <button class="preset-btn" data-color="#1f2937" style="background: #1f2937;" title="灰黑"></button>
-            <button class="preset-btn" data-color="#18181b" style="background: #18181b;" title="純黑"></button>
-            <button class="preset-btn" data-color="#ffffff" style="background: #ffffff;" title="白色"></button>
-            <button class="preset-btn" data-color="#f3f4f6" style="background: #f3f4f6;" title="淺灰"></button>
-          </div>
-        </div>
-        <div class="row" style="margin-top: 0.5rem;">
-          <div>
-            <label class="label">自訂顏色</label>
-            <input id="bgColor" class="field" type="color" value="#101828" />
-          </div>
-          <div>
-            <label class="label">透明度 <span id="opacityValue">100%</span></label>
-            <input id="bgOpacity" class="field" type="range" min="0" max="100" value="100" />
-          </div>
           </div>
         </div>
       </div>
