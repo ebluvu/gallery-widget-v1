@@ -261,6 +261,7 @@ h2, h3 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
+  min-height: 200px;
 }
 
 .album-card {
@@ -271,6 +272,7 @@ h2, h3 {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
+  min-height: 280px;
 }
 
 .album-card:hover {
@@ -290,6 +292,8 @@ h2, h3 {
   gap: 2px;
   background: #000;
   overflow: hidden;
+  min-height: 220px;
+  flex-shrink: 0;
 }
 
 .album-card-preview.count-1 {
