@@ -15,6 +15,19 @@ const state = {
 
 let pickr = null;
 
+// 等待 Pickr 库加载完成
+async function waitForPickr(timeout = 5000) {
+  const start = Date.now();
+  while (typeof Pickr === 'undefined') {
+    if (Date.now() - start > timeout) {
+      console.error('Pickr 库加载失败');
+      return false;
+    }
+    await new Promise(r => setTimeout(r, 10));
+  }
+  return true;
+}
+
 const ui = {
   emailInput: document.getElementById("emailInput"),
   signInForm: document.getElementById("signInForm"),
@@ -599,6 +612,9 @@ supabase.auth.onAuthStateChange((event, session) => {
     setStatus("缺少 Supabase 設定。");
     return;
   }
+  
+  // 等待 Pickr 库加载完成
+  await waitForPickr();
   
   // Initialize Pickr color picker
   pickr = new Pickr({
