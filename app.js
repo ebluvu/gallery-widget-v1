@@ -138,13 +138,13 @@ async function loadAlbums() {
   }
 
   for (const album of albums) {
-    // 获取该相册的前4张图片
+    // 获取该相册的前5张图片
     const { data: images } = await supabase
       .from("images")
       .select("path")
       .eq("album_id", album.id)
       .order("sort_order", { ascending: true })
-      .limit(4);
+      .limit(5);
 
     const card = document.createElement("div");
     card.className = "album-card";
@@ -155,10 +155,10 @@ async function loadAlbums() {
 
     // 封面预览
     const preview = document.createElement("div");
-    preview.className = `album-card-preview count-${Math.min(images?.length || 0, 4)}`;
+    preview.className = `album-card-preview count-${Math.min(images?.length || 0, 5)}`;
     
     if (images && images.length > 0) {
-      images.slice(0, 4).forEach((img) => {
+      images.slice(0, 5).forEach((img) => {
         const imgEl = document.createElement("img");
         imgEl.src = supabase.storage.from(BUCKET).getPublicUrl(img.path).data.publicUrl;
         preview.appendChild(imgEl);
