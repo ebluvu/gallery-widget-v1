@@ -444,6 +444,7 @@ function renderThumbnail(album, images) {
   images.forEach((image, i) => {
     const thumb = document.createElement("img");
     thumb.className = i === 0 ? "thumbnail active" : "thumbnail";
+    thumb.dataset.index = i;
     thumb.src = supabase.storage.from(BUCKET).getPublicUrl(image.path).data.publicUrl;
     thumb.alt = image.caption || "";
     thumb.addEventListener("click", () => {
@@ -454,6 +455,8 @@ function renderThumbnail(album, images) {
       thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
         t.classList.toggle("active", j === i);
       });
+      // 自动滚动到选中缩略图
+      thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     });
     thumbBar.appendChild(thumb);
   });
@@ -487,6 +490,11 @@ function renderThumbnail(album, images) {
     thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
       t.classList.toggle("active", j === currentIndex);
     });
+    // 自动滚动到当前缩略图
+    const activeThumb = thumbBar.querySelector(`[data-index="${currentIndex}"]`);
+    if (activeThumb) {
+      activeThumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
   });
   mainImage.style.cursor = "pointer";
   
