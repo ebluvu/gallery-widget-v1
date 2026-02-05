@@ -24,6 +24,11 @@ body {
   background: var(--bg);
   min-height: 100vh;
   position: relative;
+  overflow-y: scroll; /* 強制顯示滾動條 */
+}
+
+html {
+  overflow-y: scroll; /* 強制顯示滾動條 */
 }
 
 /* 網頁滾動條樣式 - 通用所有元素 */
