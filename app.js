@@ -517,13 +517,19 @@ async function prepareImage(file) {
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
 
+  // 判斷是否保留原始格式
+  const isOriginalPNG = file.type === "image/png";
+  const outputFormat = isOriginalPNG ? "image/png" : "image/jpeg";
+  const outputQuality = isOriginalPNG ? 0.92 : 0.85;
+  const fileExtension = isOriginalPNG ? "png" : "jpg";
+
   return new Promise((resolve) => {
     canvas.toBlob(
       (blob) => {
-        resolve({ blob, width: targetWidth, height: targetHeight });
+        resolve({ blob, width: targetWidth, height: targetHeight, extension: fileExtension });
       },
-      "image/jpeg",
-      0.85
+      outputFormat,
+      outputQuality
     );
   });
 }
@@ -548,12 +554,13 @@ async function uploadImages(files) {
     }
 
     setStatus(`處理中 ${file.name}...`);
-    const { blob, width, height } = await prepareImage(file);
-    const path = `${state.album.id}/${newId()}.jpg`;
+    const { blob, width, height, extension } = await prepareImage(file);
+    const path = `${state.album.id}/${newId()}.${extension}`;
+    const contentType = extension === "png" ? "image/png" : "image/jpeg";
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(path, blob, { contentType: "image/jpeg" });
+      .upload(path, blob, { contentType });
 
     if (uploadError) {
       setStatus(uploadError.message);
