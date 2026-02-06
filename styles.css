@@ -274,6 +274,48 @@ h2, h3 {
   min-height: 280px;
 }
 
+.album-card-create {
+  background: rgba(15, 23, 42, 0.25);
+  border: 2px dashed rgba(148, 163, 184, 0.35);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.album-card-create:hover {
+  border-color: var(--accent);
+  background: rgba(15, 23, 42, 0.35);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.album-card-create-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.album-card-create-plus {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: var(--ink);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.album-card-create-text {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
 .album-card:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -289,7 +331,6 @@ h2, h3 {
   aspect-ratio: 1;
   display: grid;
   gap: 2px;
-  background: #000;
   overflow: hidden;
   min-height: 220px;
   flex-shrink: 0;

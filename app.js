@@ -162,7 +162,6 @@ async function loadAlbums() {
     info.className = "muted";
     info.textContent = "尚無相簿。上傳圖片會自動建立新相簿。";
     ui.albumList.appendChild(info);
-    return;
   }
 
   for (const album of albums) {
@@ -246,6 +245,27 @@ async function loadAlbums() {
     card.appendChild(actions);
     ui.albumList.appendChild(card);
   }
+
+  const createCard = document.createElement("button");
+  createCard.type = "button";
+  createCard.className = "album-card album-card-create";
+  createCard.addEventListener("click", () => ui.fileInput.click());
+
+  const createContent = document.createElement("div");
+  createContent.className = "album-card-create-content";
+
+  const createPlus = document.createElement("span");
+  createPlus.className = "album-card-create-plus";
+  createPlus.textContent = "+";
+
+  const createText = document.createElement("span");
+  createText.className = "album-card-create-text";
+  createText.textContent = "建立相簿";
+
+  createContent.appendChild(createPlus);
+  createContent.appendChild(createText);
+  createCard.appendChild(createContent);
+  ui.albumList.appendChild(createCard);
 }
 
 async function createAlbum(title) {
@@ -524,6 +544,10 @@ async function deleteImage(image) {
 
   await supabase.storage.from(BUCKET).remove([image.path]);
   await loadImages();
+  if (state.user && state.album && state.images.length === 0) {
+    await deleteAlbum(state.album.id);
+    return;
+  }
   updateEmbed();
 }
 
