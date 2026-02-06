@@ -494,24 +494,51 @@ function renderThumbnail(album, images) {
     thumbBar.appendChild(thumb);
   });
   
-  // 檢測是否有滾動條，動態改變對齐方式
-  const updateThumbBarAlignment = () => {
-    const hasScroll = thumbBar.scrollWidth > thumbBar.clientWidth;
-    if (hasScroll) {
-      thumbBar.style.justifyContent = "flex-start";
-    } else {
-      thumbBar.style.justifyContent = "center";
+  // 等待所有縮圖加載完成後再檢查對齐
+  // 這樣可以確保 scrollWidth 和 clientWidth 都有正確的值
+  let loadedCount = 0;
+  const imageTotal = images.length;
+  
+  const checkAlignmentWhenReady = () => {
+    loadedCount++;
+    if (loadedCount === imageTotal) {
+      // 所有圖片加載完成，使用 requestAnimationFrame 確保最終佈局已計算
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          updateThumbBarAlignment();
+        });
+      });
     }
   };
   
-  // 使用 ResizeObserver 監視寬度變化（便窗口縮放時跟著改變）
+  // 為每個縮圖添加 load 和 error 事件監聽器
+  thumbBar.querySelectorAll('.thumbnail').forEach((thumb) => {
+    if (thumb.complete) {
+      // 圖片已從緩存加載或已失敗
+      checkAlignmentWhenReady();
+    } else {
+      thumb.addEventListener('load', checkAlignmentWhenReady, { once: true });
+      thumb.addEventListener('error', checkAlignmentWhenReady, { once: true });
+    }
+  });
+  
+  // 檢測是否有滾動條，動態改變對齐方式
+  // 使用 requestAnimationFrame 確保 DOM 已完全渲染
+  const updateThumbBarAlignment = () => {
+    const hasScroll = thumbBar.scrollWidth > thumbBar.clientWidth;
+    thumbBar.style.justifyContent = hasScroll ? "flex-start" : "center";
+  };
+  
+  // 使用 ResizeObserver 監視寬度變化（當窗口縮放時跟著改變）
   const resizeObserver = new ResizeObserver(() => {
     updateThumbBarAlignment();
   });
   resizeObserver.observe(thumbBar);
   
-  // 立即檢查一次
-  setTimeout(updateThumbBarAlignment, 0);
+  // 備用超時檢查，確保即使圖片加載事件未觸發也能設定對齐
+  setTimeout(() => {
+    updateThumbBarAlignment();
+  }, 1000);
   
   // 點擊大圖自動輪替到下一張
   mainImage.addEventListener("click", () => {
