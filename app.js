@@ -528,6 +528,12 @@ async function deleteImage(image) {
 }
 
 async function deleteAlbum(albumId) {
+  // 只有認證用戶才能刪除相簿及其存儲文件
+  if (!state.user) {
+    setStatus("只有登入用戶才能刪除相簿。");
+    return;
+  }
+
   // 先獲取所有圖片路徑
   const { data: images } = await supabase
     .from("images")
@@ -545,10 +551,18 @@ async function deleteAlbum(albumId) {
     return;
   }
 
-  // 刪除儲存的圖片文件
+  // 刪除儲存的圖片文件及相簿文件夾
   if (images && images.length > 0) {
     const paths = images.map(img => img.path);
-    await supabase.storage.from(BUCKET).remove(paths);
+    // 刪除所有相簿內的文件（包括直接在相簿文件夾下的所有文件）
+    const { error: storageError } = await supabase.storage
+      .from(BUCKET)
+      .remove(paths);
+    
+    if (storageError) {
+      console.warn("刪除存儲文件時出錯:", storageError);
+      // 不中斷流程，繼續刪除相簿記錄
+    }
   }
 
   // 刪除相簿
