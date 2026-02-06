@@ -555,10 +555,24 @@ async function deleteImage(image) {
     updateEmbed();
     if (state.user) {
       await deleteAlbum(deletedAlbumId);
+    } else {
+      await deleteAnonymousAlbumRecord(deletedAlbumId);
     }
     return;
   }
   updateEmbed();
+}
+
+async function deleteAnonymousAlbumRecord(albumId) {
+  const { error } = await supabase
+    .from("albums")
+    .delete()
+    .eq("id", albumId)
+    .is("owner_id", null);
+
+  if (error) {
+    console.warn("匿名刪除相簿記錄失敗:", error);
+  }
 }
 
 async function deleteAlbum(albumId) {
