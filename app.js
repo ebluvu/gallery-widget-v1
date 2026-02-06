@@ -21,7 +21,7 @@ function getImageUrl(path, options = {}) {
     const renderUrl = `${SUPABASE_URL}/storage/v1/render/image/public/${BUCKET}/${encodeStoragePath(path)}`;
     const urlObj = new URL(renderUrl);
     // 只設置品質參數，不限制寬度，保持原始縱橫比
-    urlObj.searchParams.set('quality', options.quality || '85');
+    urlObj.searchParams.set('quality', options.quality || '50');
     urlObj.searchParams.set('resize', 'contain');
     // 添加版本號強制刷新快取
     urlObj.searchParams.set('v', '1');
@@ -188,7 +188,7 @@ async function loadAlbums() {
     if (images && images.length > 0) {
       images.slice(0, 5).forEach((img) => {
         const imgEl = document.createElement("img");
-        imgEl.src = getImageUrl(img.path, { preview: true, quality: '75' });
+        imgEl.src = getImageUrl(img.path, { preview: true, quality: '50' });
         preview.appendChild(imgEl);
       });
     } else {
@@ -375,7 +375,7 @@ function renderImages() {
     card.dataset.index = index;
 
     const img = document.createElement("img");
-    img.src = getImageUrl(image.path, { preview: true, quality: '85' });
+    img.src = getImageUrl(image.path, { preview: true, quality: '50' });
 
     const input = document.createElement("input");
     input.className = "field";

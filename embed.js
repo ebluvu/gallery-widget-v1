@@ -20,7 +20,7 @@ function getImageUrl(path, options = {}) {
     const renderUrl = `${SUPABASE_URL}/storage/v1/render/image/public/${BUCKET}/${encodeStoragePath(path)}`;
     const urlObj = new URL(renderUrl);
     // 只設置品質參數，不限制寬度，保持原始縱橫比
-    urlObj.searchParams.set('quality', options.quality || '85');
+    urlObj.searchParams.set('quality', options.quality || '50');
     urlObj.searchParams.set('resize', 'contain');
     // 添加版本號強制刷新快取
     urlObj.searchParams.set('v', '1');
@@ -38,7 +38,7 @@ function getImageUrl(path, options = {}) {
 function setPreviewImage(imgEl, path, options = {}) {
   const url = getImageUrl(path, {
     preview: true,
-    quality: options.quality || '40',
+    quality: options.quality || '50',
   });
   
   imgEl.src = url;
@@ -500,7 +500,7 @@ function renderThumbnail(album, images) {
     const thumb = document.createElement("img");
     thumb.className = i === 0 ? "thumbnail active" : "thumbnail";
     thumb.dataset.index = i;
-    thumb.src = getImageUrl(image.path, { preview: true, quality: '70' });
+    thumb.src = getImageUrl(image.path, { preview: true, quality: '50' });
     thumb.alt = image.caption || "";
     thumb.addEventListener("click", () => {
       currentIndex = i;
