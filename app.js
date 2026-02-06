@@ -17,6 +17,9 @@ function getImageUrl(path, options = {}) {
     // 設置最大寬度為1200px，質量為85（在質量和大小間取得平衡）
     urlObj.searchParams.set('width', options.width || '1200');
     urlObj.searchParams.set('quality', options.quality || '85');
+    if (options.format) {
+      urlObj.searchParams.set('format', options.format);
+    }
     return urlObj.toString();
   }
   
@@ -809,7 +812,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   // Initialize Pickr color picker
   pickr = new Pickr({
     el: "#bgColorPickr",
-    theme: "classic",
+    theme: "nano",
     default: "#101828",
     components: {
       preview: true,
@@ -818,9 +821,9 @@ supabase.auth.onAuthStateChange((event, session) => {
       interaction: {
         hex: true,
         rgba: true,
-        hsla: true,
-        hsva: true,
-        cmyk: true,
+        hsla: false,
+        hsva: false,
+        cmyk: false,
         input: true,
         clear: true,
         save: true,

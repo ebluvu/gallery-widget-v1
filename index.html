@@ -79,42 +79,40 @@
       </div>
     </section>
 
-    <section>
-      <div class="card">
-        <div class="card-head">
-          <h3>設定</h3>
-          <p class="muted">這些設定會套用到嵌入頁面。</p>
+    <section class="card">
+      <div class="card-head">
+        <h3>設定</h3>
+        <p class="muted">這些設定會套用到嵌入頁面。</p>
+      </div>
+      <div class="row">
+        <div>
+          <label class="label">主題</label>
+          <select id="themeSelect" class="field">
+            <option value="slideshow">幻燈片</option>
+            <option value="thumbnail">縮略圖</option>
+          </select>
         </div>
-        <div class="row">
-          <div>
-            <label class="label">主題</label>
-            <select id="themeSelect" class="field">
-              <option value="slideshow">幻燈片</option>
-              <option value="thumbnail">縮略圖</option>
-            </select>
-          </div>
-          <div>
-            <label class="label">背景顏色 (附透明度)</label>
-            <div id="bgColorPickr"></div>
-            <input id="bgColor" type="hidden" value="#101828" />
-          </div>
-          <div>
-            <label class="label">新圖片位置</label>
-            <select id="addNewSelect" class="field">
-              <option value="last">最後</option>
-              <option value="first">最前</option>
-            </select>
-          </div>
+        <div>
+          <label class="label">背景顏色 (附透明度)</label>
+          <div id="bgColorPickr"></div>
+          <input id="bgColor" type="hidden" value="#101828" />
+        </div>
+        <div>
+          <label class="label">新圖片位置</label>
+          <select id="addNewSelect" class="field">
+            <option value="last">最後</option>
+            <option value="first">最前</option>
+          </select>
         </div>
       </div>
+    </section>
 
-      <div class="card">
-        <div class="card-head">
-          <h3>圖片</h3>
-          <p class="muted">可編輯說明文字，可刪除圖片。</p>
-        </div>
-        <div id="imageList" class="images"></div>
+    <section class="card">
+      <div class="card-head">
+        <h3>圖片</h3>
+        <p class="muted">可編輯說明文字，可刪除圖片。</p>
       </div>
+      <div id="imageList" class="images"></div>
     </section>
   </main>
 

@@ -16,11 +16,49 @@ function getImageUrl(path, options = {}) {
     // 設置最大寬度，質量為85（在質量和大小間取得平衡）
     urlObj.searchParams.set('width', options.width || '1600');
     urlObj.searchParams.set('quality', options.quality || '85');
+    if (options.format) {
+      urlObj.searchParams.set('format', options.format);
+    }
     return urlObj.toString();
   }
   
   // 原始URL用於下載、複製、開啟操作
   return url;
+}
+
+// 先顯示低品質預覽，再切換到高品質版本
+function setPreviewImage(imgEl, path, options = {}) {
+  const lowUrl = getImageUrl(path, {
+    preview: true,
+    width: options.lowWidth || '320',
+    quality: options.lowQuality || '30',
+    format: options.format || 'webp',
+  });
+  const highUrl = getImageUrl(path, {
+    preview: true,
+    width: options.highWidth || '1600',
+    quality: options.highQuality || '85',
+    format: options.format || 'webp',
+  });
+
+  if (lowUrl === highUrl) {
+    imgEl.src = highUrl;
+    imgEl.classList.remove('is-loading');
+    return;
+  }
+
+  imgEl.classList.add('is-loading');
+  imgEl.src = lowUrl;
+
+  const highImg = new Image();
+  highImg.onload = () => {
+    imgEl.src = highUrl;
+    imgEl.classList.remove('is-loading');
+  };
+  highImg.onerror = () => {
+    imgEl.classList.remove('is-loading');
+  };
+  highImg.src = highUrl;
 }
 
 const ui = {
@@ -158,6 +196,7 @@ async function loadAlbum(albumId) {
 
   const bgColor = album.background_color || "#0c1117";
   document.body.style.background = bgColor;
+  document.documentElement.style.background = bgColor;
   ui.grid.className = `embed-grid ${album.theme || "slideshow"}`;
 
   const { data: images, error: imageError } = await supabase
@@ -196,7 +235,7 @@ function renderSlideshow(album, images) {
   
   const mainImage = document.createElement("img");
   mainImage.className = "slideshow-main";
-  mainImage.src = getImageUrl(images[0].path, { preview: true });
+  setPreviewImage(mainImage, images[0].path, { highWidth: '1600' });
   mainImage.alt = images[0].caption || "";
   
   const overlay = document.createElement("div");
@@ -281,7 +320,7 @@ function renderSlideshow(album, images) {
   
   function goToSlide(index) {
     currentIndex = index;
-    mainImage.src = getImageUrl(images[index].path, { preview: true });
+    setPreviewImage(mainImage, images[index].path, { highWidth: '1600' });
     mainImage.alt = images[index].caption || "";
     caption.textContent = images[index].caption || "";
     
@@ -354,7 +393,7 @@ function renderThumbnail(album, images) {
   
   const mainImage = document.createElement("img");
   mainImage.className = "thumbnail-main";
-  mainImage.src = getImageUrl(images[0].path, { preview: true });
+  setPreviewImage(mainImage, images[0].path, { highWidth: '1600' });
   mainImage.alt = images[0].caption || "";
   
   const overlay = document.createElement("div");
@@ -482,7 +521,7 @@ function renderThumbnail(album, images) {
     thumb.alt = image.caption || "";
     thumb.addEventListener("click", () => {
       currentIndex = i;
-      mainImage.src = getImageUrl(image.path, { preview: true });
+      setPreviewImage(mainImage, image.path, { highWidth: '1600' });
       mainImage.alt = image.caption || "";
       caption.textContent = image.caption || "";
       thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
@@ -544,7 +583,7 @@ function renderThumbnail(album, images) {
   mainImage.addEventListener("click", () => {
     currentIndex = (currentIndex + 1) % images.length;
     const nextImage = images[currentIndex];
-    mainImage.src = getImageUrl(nextImage.path, { preview: true });
+    setPreviewImage(mainImage, nextImage.path, { highWidth: '1600' });
     mainImage.alt = nextImage.caption || "";
     caption.textContent = nextImage.caption || "";
     thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
