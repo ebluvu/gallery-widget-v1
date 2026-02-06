@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gallery Widget v1</title>
+  <title>圖庫小工具</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet" />
@@ -17,10 +17,10 @@
   <div class="bg" aria-hidden="true"></div>
   <header class="shell">
     <div class="brand">
-      <div class="logo">GW</div>
+      <div class="logo">🎞️</div>
       <div>
-        <p class="eyebrow">Embeddable Gallery</p>
-        <h1>Gallery Widget v1</h1>
+        <p class="eyebrow">可嵌入的圖庫小工具</p>
+        <h1>Gallery Widget</h1>
       </div>
     </div>
     <div class="auth">
@@ -72,8 +72,9 @@
       </div>
       <div style="margin-top: 1rem;">
         <label class="label">即時預覽</label>
-        <div style="border: 1px solid #333; border-radius: 8px; overflow: hidden; background: transparent;">
-          <iframe id="embedPreview" width="100%" height="420" frameborder="0" style="display: block;"></iframe>
+        <div id="previewContainer" style="border: 1px solid #333; border-radius: 8px; overflow: hidden; background: transparent; position: relative; resize: both; min-width: 200px; min-height: 200px;">
+          <iframe id="embedPreview" width="100%" height="420" frameborder="0" style="display: block; width: 100%; height: 100%;"></iframe>
+          <div id="resizeHandle" style="position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; background: linear-gradient(135deg, transparent 50%, #f97316 50%); cursor: se-resize; opacity: 0.5;"></div>
         </div>
       </div>
     </section>
@@ -117,7 +118,12 @@
     </section>
   </main>
 
+  <footer class="footer">
+    <p class="footer-text">本網站為 AI 輔助開發，僅作為分享用途 | © 2026 ebluvu | <span style="color: var(--muted);">本網站不會竊取或儲存個人隱私資訊，圖片存儲於 <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></span></p>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
   <script type="module" src="app.js"></script>
+  <script type="module" src="resize-preview.js"></script>
 </body>
 </html>

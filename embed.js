@@ -22,7 +22,7 @@ function isOwner() {
 
 // 通用工具函數
 function openBuilder() {
-  window.open("https://ebluvu.github.io/gallery-widget-v1/", "_blank", "noopener");
+  window.open("https://ebluvu.github.io/gallery-widget/", "_blank", "noopener");
 }
 
 function toggleFullscreen() {

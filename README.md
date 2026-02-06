@@ -1,4 +1,4 @@
-Gallery Widget v1
+Gallery Widget
 
 功能說明
 - 使用 Supabase 驗證 + 資料庫 + 儲存的前端圖庫管理工具
