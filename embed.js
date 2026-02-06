@@ -30,9 +30,9 @@ function getImageUrl(path, options = {}) {
 function setPreviewImage(imgEl, path, options = {}) {
   const url = getImageUrl(path, {
     preview: true,
-    width: options.width || '1400',
-    quality: '40', // 降低大小以加快切換
-    format: 'webp', // webp 格式
+    width: options.width || '800',
+    quality: '20',
+    format: 'webp',
   });
   
   imgEl.src = url;

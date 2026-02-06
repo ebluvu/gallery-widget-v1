@@ -812,7 +812,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   // Initialize Pickr color picker
   pickr = new Pickr({
     el: "#bgColorPickr",
-    theme: "monolith",
+    theme: "classic",
     default: "#101828",
     components: {
       preview: true,
@@ -821,9 +821,9 @@ supabase.auth.onAuthStateChange((event, session) => {
       interaction: {
         hex: true,
         rgba: true,
-        hsla: true,
-        hsva: true,
-        cmyk: true,
+        hsla: false,
+        hsva: false,
+        cmyk: false,
         input: true,
         clear: true,
         save: true,
