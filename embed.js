@@ -38,8 +38,7 @@ function setPreviewImage(imgEl, path, options = {}) {
   const url = getImageUrl(path, {
     preview: true,
     width: options.width || '800',
-    quality: '20',
-    format: 'webp',
+    quality: '40',
   });
   
   imgEl.src = url;
