@@ -26,43 +26,16 @@ function getImageUrl(path, options = {}) {
   return url;
 }
 
-// LQIP：先顯示完整大小但低品質版本，再切換到高品質版本
+// 快速設置圖片 - 直接用低品質快速版
 function setPreviewImage(imgEl, path, options = {}) {
-  const width = options.width || '1600';
-  
-  // 低品質版本：完整寬度，只是降低品質和用 webp 格式
-  const lowUrl = getImageUrl(path, {
+  const url = getImageUrl(path, {
     preview: true,
-    width: width,
-    quality: '40',
-    format: 'webp',
+    width: options.width || '1600',
+    quality: '50', // 低品質但不會太模糊
+    format: 'webp', // webp 格式
   });
   
-  // 高品質版本
-  const highUrl = getImageUrl(path, {
-    preview: true,
-    width: width,
-    quality: '85',
-  });
-
-  // 如果低高品質 URL 一樣，直接設
-  if (lowUrl === highUrl) {
-    imgEl.src = highUrl;
-    return;
-  }
-
-  // 先立即設低品質版本，讓用戶看到完整大小的低畫質圖
-  imgEl.src = lowUrl;
-
-  // 背景載入高品質版本
-  const highImg = new Image();
-  highImg.onload = () => {
-    // 只有在元素還指向低品質版才替換
-    if (imgEl.src === lowUrl) {
-      imgEl.src = highUrl;
-    }
-  };
-  highImg.src = highUrl;
+  imgEl.src = url;
 }
 
 const ui = {

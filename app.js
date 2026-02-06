@@ -821,9 +821,9 @@ supabase.auth.onAuthStateChange((event, session) => {
       interaction: {
         hex: true,
         rgba: true,
-        hsla: false,
-        hsva: false,
-        cmyk: false,
+        hsla: true,
+        hsva: true,
+        cmyk: true,
         input: true,
         clear: true,
         save: true,
