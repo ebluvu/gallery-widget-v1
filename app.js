@@ -993,237 +993,105 @@ function updateMigrationProgress(current, total) {
 }
 
 // 從 albumizr URL 提取相簿 key
+// 支援兩種格式：
+// 1. https://albumizr.com/a/0Gnc (短網址)
+// 2. https://albumizr.com/skins/bandana/index.php?key=0Gnc (完整網址)
 function extractAlbumizrKey(url) {
   try {
     const urlObj = new URL(url);
+    
+    // 檢查是否為短網址格式 /a/{key}
+    const pathMatch = urlObj.pathname.match(/\/a\/([^/]+)/);
+    if (pathMatch) {
+      return pathMatch[1];
+    }
+    
+    // 檢查是否為完整網址格式的 key 參數
     const key = urlObj.searchParams.get('key');
-    return key;
+    if (key) {
+      return key;
+    }
+    
+    return null;
   } catch (e) {
-    // 嘗試直接匹配 key 參數
-    const match = url.match(/[?&]key=([^&]+)/);
-    return match ? match[1] : null;
+    // 嘗試直接匹配 key 參數或短網址路徑
+    const pathMatch = url.match(/\/a\/([^/]+)/);
+    if (pathMatch) {
+      return pathMatch[1];
+    }
+    
+    const keyMatch = url.match(/[?&]key=([^&]+)/);
+    return keyMatch ? keyMatch[1] : null;
   }
 }
 
-// CORS 代理列表（按優先順序）
-const CORS_PROXIES = [
-  { name: 'AllOrigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
-  { name: 'ThingProxy', url: (targetUrl) => `https://thingproxy.freeboard.io/fetch/${targetUrl}` },
-  { name: 'CorsProxy', url: (targetUrl) => `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` },
-];
-
-// 使用 Supabase Edge Function 提取 Albumizr 圖片（推薦方法，無 CORS 問題）
+// 使用 Supabase Edge Function 提取 Albumizr 圖片
 async function fetchAlbumizrImagesViaEdgeFunction(albumUrl) {
   const key = extractAlbumizrKey(albumUrl);
   if (!key) {
     throw new Error('無法從 URL 中提取相簿 key');
   }
 
-  addMigrationLog(`正在從 albumizr 提取相簿 [${key}] 的圖片 (使用伺服器端)...`, 'info');
+  addMigrationLog(`正在從 Albumizr 提取相簿 [${key}]...`, 'info');
 
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token || SUPABASE_ANON_KEY;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token || SUPABASE_ANON_KEY;
 
-    console.log('調用 Edge Function，參數：', { albumKey: key, method: 'key' });
-
-    // 使用原生 fetch API 直接調用，以便捕捉所有狀態碼和響應內容
-    const functionUrl = `${SUPABASE_URL}/functions/v1/migrate-albumizr`;
-    
-    const fetchResponse = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        albumKey: key,
-        method: 'key'
-      })
-    });
-
-    console.log('Fetch Response Status:', fetchResponse.status, fetchResponse.statusText);
-    
-    const responseText = await fetchResponse.text();
-    console.log('Fetch Response Body:', responseText);
-    
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      console.error('無法解析 JSON 回應:', e);
-      throw new Error(`Edge Function 返回非 JSON 內容 (${fetchResponse.status}): ${responseText}`);
-    }
-
-    // 檢查狀態碼
-    if (!fetchResponse.ok) {
-      const errorMsg = data.error || `HTTP ${fetchResponse.status}: ${responseText}`;
-      console.error('Edge Function HTTP 錯誤：', errorMsg);
-      throw new Error(`Edge Function HTTP 錯誤: ${errorMsg}`);
-    }
-
-    // 檢查自訂的 success 標志
-    if (!data.success) {
-      const errorMsg = data.error || '提取失敗（未知原因）';
-      console.error('遷移失敗：', errorMsg);
-      throw new Error(`遷移失敗: ${errorMsg}`);
-    }
-
-    if (!data.images || data.images.length === 0) {
-      const errorMsg = data.error || '未找到任何圖片';
-      console.warn('無圖片：', errorMsg);
-      throw new Error(`無圖片: ${errorMsg}`);
-    }
-
-    addMigrationLog(`✓ 成功提取 ${data.images.length} 張圖片及說明文字 (伺服器端)`, 'success');
-    return data.images;
-
-  } catch (error) {
-    console.error('fetchAlbumizrImagesViaEdgeFunction 捕捉到錯誤：', error);
-    addMigrationLog(`✗ 遷移失敗: ${error.message}`, 'error');
-    throw error;
-  }
-}
-
-// 從 albumizr 獲取圖片列表（包含 URL 和說明文字）- 使用 CORS 代理（備用方法）
-async function fetchAlbumizrImages(albumUrl) {
-  const key = extractAlbumizrKey(albumUrl);
-  if (!key) {
-    throw new Error('無法從 URL 中提取相簿 key');
-  }
-
-  addMigrationLog(`正在從 albumizr 提取相簿 [${key}] 的圖片...`, 'info');
-
-  const targetUrl = `https://albumizr.com/skins/bandana/index.php?key=${key}`;
+  const functionUrl = `${SUPABASE_URL}/functions/v1/migrate-albumizr`;
   
-  // 嘗試多個 CORS 代理
-  let lastError = null;
-  for (const proxy of CORS_PROXIES) {
-    try {
-      addMigrationLog(`嘗試使用 ${proxy.name} 代理...`, 'info');
-      const proxyUrl = proxy.url(targetUrl);
-      
-      const response = await fetch(proxyUrl, {
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP 錯誤: ${response.status}`);
-      }
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      albumKey: key,
+      method: 'key'
+    })
+  });
 
-      const html = await response.text();
-    
-      // 解析 HTML 來提取圖片資訊
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      
-      // Albumizr 使用 <div class="th" data-url="..." data-caption="..."> 結構
-      const thumbDivs = doc.querySelectorAll('div.th[data-url]');
-      
-      const images = [];
-      thumbDivs.forEach(div => {
-        let imageUrl = div.getAttribute('data-url');
-        const caption = div.getAttribute('data-caption') || '';
-        
-        if (imageUrl) {
-          // 處理相對路徑（以 // 開頭）
-          if (imageUrl.startsWith('//')) {
-            imageUrl = 'https:' + imageUrl;
-          } else if (!imageUrl.startsWith('http')) {
-            imageUrl = 'https://albumizr.com' + imageUrl;
-          }
-          
-          images.push({
-            url: imageUrl,
-            caption: caption
-          });
-        }
-      });
-      
-      if (images.length === 0) {
-        throw new Error('未在相簿中找到任何圖片');
-      }
-
-      addMigrationLog(`✓ 成功提取 ${images.length} 張圖片及說明文字 (使用 ${proxy.name})`, 'success');
-      return images;
-      
-    } catch (error) {
-      lastError = error;
-      addMigrationLog(`${proxy.name} 失敗: ${error.message}`, 'warning');
-      // 繼續嘗試下一個代理
-    }
+  if (!response.ok) {
+    throw new Error(`提取失敗: HTTP ${response.status}`);
   }
   
-  // 所有代理都失敗了
-  addMigrationLog(`✗ 所有代理都失敗了`, 'error');
-  throw lastError || new Error('無法提取圖片');
+  const data = await response.json();
+  
+  if (!data.success || !data.images || data.images.length === 0) {
+    throw new Error(data.error || '未找到任何圖片');
+  }
+
+  addMigrationLog(`✓ 成功提取 ${data.images.length} 張圖片`, 'success');
+  return data.images;
 }
 
-// 從 URL 下載圖片並轉換為 Blob - 使用 Edge Function
+// 從 URL 下載圖片並轉換為 Blob
 async function downloadImage(imageUrl) {
-  try {
-    // 使用 Edge Function 從伺服器端下載圖片，繞過 CORS 問題
-    const functionUrl = `${SUPABASE_URL}/functions/v1/migrate-albumizr`;
-    
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        imageUrl: imageUrl
-      })
-    });
+  const functionUrl = `${SUPABASE_URL}/functions/v1/migrate-albumizr`;
+  
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      imageUrl: imageUrl
+    })
+  });
 
-    if (!response.ok) {
-      throw new Error(`HTTP 錯誤: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    
-    // 確保是圖片類型
-    if (!blob.type.startsWith('image/')) {
-      throw new Error('下載的內容不是圖片');
-    }
-
-    return blob;
-    
-  } catch (error) {
-    console.error('Edge Function 下載失敗:', error);
-    // 如果 Edge Function 失敗，嘗試備用方法（CORS 代理）
-    let lastError = null;
-    for (const proxy of CORS_PROXIES) {
-      try {
-        const proxyUrl = proxy.url(imageUrl);
-        
-        const response = await fetch(proxyUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP 錯誤: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        
-        // 確保是圖片類型
-        if (!blob.type.startsWith('image/')) {
-          throw new Error('下載的內容不是圖片');
-        }
-
-        return blob;
-        
-      } catch (error) {
-        lastError = error;
-        // 靜默失敗，嘗試下一個代理
-        continue;
-      }
-    }
-    
-    // 所有方法都失敗了
-    throw new Error(`下載失敗: ${lastError?.message || '所有代理都失敗'}`);
+  if (!response.ok) {
+    throw new Error(`下載失敗: HTTP ${response.status}`);
   }
+
+  const blob = await response.blob();
+  
+  if (!blob.type.startsWith('image/')) {
+    throw new Error('下載的內容不是圖片');
+  }
+
+  return blob;
 }
 
 // 遷移單個相簿
@@ -1257,14 +1125,10 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
       const imageIndex = i + 1;
       
       try {
-        addMigrationLog(`[${imageIndex}/${images.length}] 下載圖片...`, 'info');
         const blob = await downloadImage(image.url);
-
-        // 創建 File 對象
         const fileName = image.url.split('/').pop() || `image-${imageIndex}.jpg`;
         const file = new File([blob], fileName, { type: blob.type });
 
-        // 上傳圖片
         const { blob: processedBlob, width, height, extension } = await prepareImage(file);
         const path = `${album.id}/${newId()}.${extension}`;
         const contentType = extension === "png" ? "image/png" : "image/jpeg";
@@ -1273,11 +1137,8 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
           .from(BUCKET)
           .upload(path, processedBlob, { contentType });
 
-        if (uploadError) {
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
 
-        // 添加到資料庫，包含圖片說明文字
         const sortOrder = i + 1;
         const { error: insertError } = await supabase
           .from("images")
@@ -1285,39 +1146,40 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
             id: newId(),
             album_id: album.id,
             path,
-            caption: image.caption, // 使用從 albumizr 提取的說明文字
+            caption: image.caption,
             sort_order: sortOrder,
             width,
             height,
           });
 
-        if (insertError) {
-          throw insertError;
-        }
+        if (insertError) throw insertError;
 
         successCount++;
-        const captionInfo = image.caption ? ` (說明: ${image.caption})` : '';
-        addMigrationLog(`✓ [${imageIndex}/${images.length}] 圖片上傳成功${captionInfo}`, 'success');
-        
-        // 更新進度
+        const captionInfo = image.caption ? ` "${image.caption}"` : '';
+        addMigrationLog(`✓ [${imageIndex}/${images.length}]${captionInfo}`, 'success');
         updateMigrationProgress(albumIndex - 1 + (imageIndex / images.length), totalAlbums);
       } catch (error) {
         failCount++;
-        addMigrationLog(`✗ [${imageIndex}/${images.length}] 圖片上傳失敗: ${error.message}`, 'error');
+        addMigrationLog(`✗ [${imageIndex}/${images.length}] ${error.message}`, 'error');
       }
     }
 
-    // 恢復之前選中的相簿
-    state.album = previousAlbum;
-
-    // 4. 完成
+    // 4. 完成並同步更新 UI
     addMigrationLog(
-      `✓ 相簿遷移完成！成功: ${successCount}, 失敗: ${failCount}`,
-      successCount > 0 ? 'success' : 'warning'
+      `✓ 相簿遷移完成！成功: ${successCount}/${images.length} 張圖片`,
+      'success'
     );
 
     // 重新載入相簿列表
     await loadAlbums();
+    
+    // 選中新創建的相簿，同步更新所有 UI
+    state.album = album;
+    await loadImages();
+    updateEmbed();
+    
+    // 恢復之前選中的相簿
+    state.album = previousAlbum;
     
     return { success: successCount, failed: failCount };
   } catch (error) {
@@ -1374,10 +1236,11 @@ async function startMigration() {
   }
 
   // 完成
-  addMigrationLog(
-    `\n🎉 所有遷移完成！\n總計成功: ${totalSuccess} 張圖片\n總計失敗: ${totalFailed} 張圖片`,
-    totalFailed === 0 ? 'success' : 'warning'
-  );
+  const finalMessage = totalFailed === 0 
+    ? `🎉 所有遷移完成！成功上傳 ${totalSuccess} 張圖片`
+    : `遷移完成！成功: ${totalSuccess} 張，失敗: ${totalFailed} 張`;
+  
+  addMigrationLog(finalMessage, totalFailed === 0 ? 'success' : 'warning');
 
   showToast('遷移完成！', 'success');
 
