@@ -1,6 +1,4 @@
 // Albumizr Migration Edge Function
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -39,28 +37,23 @@ Deno.serve(async (req) => {
 
     const html = await response.text();
     
-    // Parse HTML
-    const document = new DOMParser().parseFromString(html, 'text/html');
+    console.log(`Fetched HTML, length: ${html.length}`);
     
-    if (!document) {
-      throw new Error('Failed to parse HTML');
-    }
-
-    // Extract images from Albumizr structure
-    const thumbnails = document.querySelectorAll('.th');
+    // Extract images using regex instead of DOMParser
     const images: Array<{ url: string; caption?: string }> = [];
-
-    console.log(`Found ${thumbnails.length} thumbnail elements`);
-
-    // Convert NodeList to Array for iteration
-    for (const thumb of Array.from(thumbnails)) {
-      const dataUrl = thumb.getAttribute('data-url');
-      const dataCaption = thumb.getAttribute('data-caption') || '';
+    
+    // Match pattern: <div class="th" data-url="..." data-caption="...">
+    const thumbRegex = /<div\s+class="th"\s+data-url="([^"]+)"(?:\s+data-caption="([^"]*)")?/gi;
+    let match;
+    
+    while ((match = thumbRegex.exec(html)) !== null) {
+      const url = match[1];
+      const caption = match[2] || '';
       
-      if (dataUrl) {
+      if (url) {
         images.push({
-          url: dataUrl,
-          caption: dataCaption,
+          url: url,
+          caption: caption,
         });
       }
     }
@@ -88,7 +81,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error.message || String(error),
       }),
       {
         status: 500,
