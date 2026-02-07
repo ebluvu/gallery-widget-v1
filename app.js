@@ -1022,12 +1022,19 @@ async function fetchAlbumizrImagesViaEdgeFunction(albumUrl) {
   addMigrationLog(`正在從 albumizr 提取相簿 [${key}] 的圖片 (使用伺服器端)...`, 'info');
 
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token || SUPABASE_ANON_KEY;
+
     // 調用 Supabase Edge Function
     const response = await supabase.functions.invoke('migrate-albumizr', {
       body: {
         albumKey: key,
         method: 'key'
-      }
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
     });
 
     if (response.error) {
@@ -1169,14 +1176,8 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
     
     addMigrationLog(`[${albumIndex}/${totalAlbums}] 開始遷移相簿: ${albumTitle}`, 'info');
 
-    // 1. 提取圖片列表（先嘗試使用 Edge Function，失敗則使用 CORS 代理）
-    let images;
-    try {
-      images = await fetchAlbumizrImagesViaEdgeFunction(albumUrl);
-    } catch (edgeFunctionError) {
-      addMigrationLog(`伺服器端提取失敗，嘗試使用 CORS 代理...`, 'warning');
-      images = await fetchAlbumizrImages(albumUrl);
-    }
+    // 1. 提取圖片列表（只使用 Edge Function）
+    const images = await fetchAlbumizrImagesViaEdgeFunction(albumUrl);
 
     // 2. 創建新相簿
     addMigrationLog(`正在創建相簿...`, 'info');
