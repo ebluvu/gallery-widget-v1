@@ -1,0 +1,9 @@
+# robots.txt for Gallery Widget
+User-agent: *
+Allow: /
+
+# Disallow embed page from search engines
+Disallow: /embed.html
+
+# Sitemap location
+Sitemap: https://ebluvu.github.io/gallery-widget/sitemap.xml
