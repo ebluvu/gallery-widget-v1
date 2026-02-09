@@ -708,17 +708,19 @@ h2, h3 {
 }
 
 .slideshow-title {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Space Grotesk", "Noto Sans TC", sans-serif;
   margin: 0 0 8px 0;
-  font-size: clamp(16px, 2.4vw, 24px);
-  font-weight: 700;
+  font-size: clamp(20px, 2.4vw, 28px);
+  font-weight: 900;
   color: white;
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .slideshow-caption {
+  font-family: "Space Grotesk", "Noto Sans TC", sans-serif;
   margin: 0;
-  font-size: clamp(12px, 1.6vw, 14px);
+  font-size: clamp(14px, 1.6vw, 16px);
+  font-weight: 700;
   color: rgba(255,255,255,0.9);
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 1px 3px rgba(0, 0, 0, 0.6);
 }
@@ -787,16 +789,27 @@ h2, h3 {
   left: 0;
   right: 0;
   text-align: center;
-  padding: 8px 0;
+  padding: 8px 4px;
   background: transparent;
   z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: clamp(3px, 0.5vw, 5px);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.slideshow-dots::-webkit-scrollbar {
+  height: 0;
 }
 
 .dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin: 0 4px;
+  width: clamp(5px, 1vw, 8px);
+  height: clamp(5px, 1vw, 8px);
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.4);
   border-radius: 0;
   cursor: pointer;
@@ -916,16 +929,18 @@ h2, h3 {
 }
 
 .thumbnail-title {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Space Grotesk", "Noto Sans TC", sans-serif;
   margin: 0 0 8px 0;
-  font-size: clamp(16px, 2.4vw, 24px);
-  font-weight: 700;
+  font-size: clamp(20px, 2.4vw, 28px);
+  font-weight: 900;
   color: white;
 }
 
 .thumbnail-caption {
+  font-family: "Space Grotesk", "Noto Sans TC", sans-serif;
   margin: 0;
-  font-size: clamp(12px, 1.6vw, 14px);
+  font-size: clamp(14px, 1.6vw, 16px);
+  font-weight: 700;
   color: white;
 }
 
