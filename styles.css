@@ -708,6 +708,7 @@ h2, h3 {
 }
 
 .slideshow-title {
+  font-family: "Space Grotesk", sans-serif;
   margin: 0 0 8px 0;
   font-size: clamp(16px, 2.4vw, 24px);
   font-weight: 700;
@@ -716,7 +717,6 @@ h2, h3 {
 }
 
 .slideshow-caption {
-  font-family: "Space Grotesk", sans-serif;
   margin: 0;
   font-size: clamp(12px, 1.6vw, 14px);
   color: rgba(255,255,255,0.9);
@@ -916,6 +916,7 @@ h2, h3 {
 }
 
 .thumbnail-title {
+  font-family: "Space Grotesk", sans-serif;
   margin: 0 0 8px 0;
   font-size: clamp(16px, 2.4vw, 24px);
   font-weight: 700;
@@ -923,7 +924,6 @@ h2, h3 {
 }
 
 .thumbnail-caption {
-  font-family: "Space Grotesk", sans-serif;
   margin: 0;
   font-size: clamp(12px, 1.6vw, 14px);
   color: white;
