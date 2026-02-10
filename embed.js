@@ -371,28 +371,14 @@ async function loadAlbum(albumId) {
     return;
   }
 
-  // 雙層背景系統：底層是 Notion 主題色，上層是用戶自訂色
+  // 雙層背景系統：底層是 Notion 主題色（系統深淺色），上層是用戶自訂色
   const userBgColor = album.background_color || "#0c1117";
   
-  // ⚠️ 在 Notion 環境中，先讀取 iframe 本身的背景色（在我們覆蓋之前）
-  // Notion 會在 iframe 標籤上設定 background-color: var(--c-bacPri)
-  let notionOriginalBg = null;
-  if (isFromNotion()) {
-    console.log('[背景偵測] Notion 環境，讀取 iframe 初始背景色');
-    notionOriginalBg = window.getComputedStyle(document.body).backgroundColor;
-    console.log('[背景偵測] body 初始背景色:', notionOriginalBg);
-    
-    const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
-    console.log('[背景偵測] html 初始背景色:', htmlBg);
-  }
-  
-  // 非 Notion 環境：直接套用用戶自訂背景色
-  // Notion 環境：也設定用戶背景色（會被 .notion-theme-bg 覆蓋）
   document.body.style.background = userBgColor;
   document.documentElement.style.background = userBgColor;
   
-  // 設定底層 Notion 主題背景（會透過偵測邏輯更新為實際的區塊背景色）
-  updateNotionThemeBackground(notionOriginalBg);
+  // 設定底層 Notion 主題背景（會根據系統深淺色主題更新）
+  updateNotionThemeBackground();
   
   ui.grid.className = `embed-grid ${album.theme || "slideshow"}`;
 
@@ -717,101 +703,35 @@ function isInIframe() {
 }
 
 /**
- * 檢測頁面真實背景色（包括 Notion 區塊背景色）
- * 通過 getComputedStyle 直接讀取計算後的顏色
- * @param {string} savedOriginalBg - 在設定 userBgColor 之前保存的初始背景色
+ * 檢測背景色
+ * 由於 Notion 跨域限制，無法讀取區塊背景色
+ * 改用系統深淺色主題作為 Notion 環境的背景色備案
  */
-function detectActualBackgroundColor(savedOriginalBg = null) {
+function detectActualBackgroundColor() {
   try {
-    console.log('[背景檢測] 開始檢測背景色...');
-    console.log('[背景檢測] savedOriginalBg:', savedOriginalBg);
-    console.log('[背景檢測] window.frameElement:', window.frameElement);
-    const inIframe = isInIframe();
-    console.log('[背景檢測] isInIframe():', inIframe);
-    
-    // 方法0: 如果有保存的初始背景色（來自 Notion iframe 標籤），優先使用
-    if (savedOriginalBg && savedOriginalBg !== 'transparent' && !savedOriginalBg.includes('rgba(0, 0, 0, 0)')) {
-      console.log('[背景檢測] ✓ 方法0成功 - 使用保存的 Notion iframe 初始背景色:', savedOriginalBg);
-      return savedOriginalBg;
-    }
-    
-    // 方法1: 如果可以存取 frameElement，直接讀取父層元素
-    if (window.frameElement) {
-      const parentElement = window.frameElement.parentElement;
-      console.log('[背景檢測] 父級元素:', parentElement);
-      
-      if (parentElement) {
-        const bgColor = window.getComputedStyle(parentElement).backgroundColor;
-        console.log('[背景檢測] 父級背景色:', bgColor);
-        
-        // 如果父級有非透明背景色，使用它
-        if (bgColor && bgColor !== 'transparent' && !bgColor.includes('rgba(0, 0, 0, 0)')) {
-          console.log('[背景檢測] ✓ 方法1成功 - 檢測到父層區塊背景色:', bgColor);
-          return bgColor;
-        }
-      }
-    }
-
-    // 方法2: 如果在 iframe 但無法存取 frameElement（跨域），檢查自己的 body 背景
-    // Notion 可能會將區塊顏色套用到 iframe 內部
-    if (inIframe) {
-      console.log('[背景檢測] iframe 環境但無法存取 frameElement（跨域限制）');
-      
-      // 檢查 body 的計算背景色
-      const bodyBg = window.getComputedStyle(document.body).backgroundColor;
-      console.log('[背景檢測] document.body 背景色:', bodyBg);
-      
-      if (bodyBg && bodyBg !== 'transparent' && !bodyBg.includes('rgba(0, 0, 0, 0)')) {
-        console.log('[背景檢測] ✓ 方法2成功 - 使用 body 背景色:', bodyBg);
-        return bodyBg;
-      }
-      
-      // 檢查 html 的計算背景色
-      const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
-      console.log('[背景檢測] document.documentElement 背景色:', htmlBg);
-      
-      if (htmlBg && htmlBg !== 'transparent' && !htmlBg.includes('rgba(0, 0, 0, 0)')) {
-        console.log('[背景檢測] ✓ 方法2成功 - 使用 html 背景色:', htmlBg);
-        return htmlBg;
-      }
-      
-      console.log('[背景檢測] ⚠ 方法2失敗 - iframe 內無法讀取到非透明背景色');
-    } else {
-      console.log('[背景檢測] 非 iframe 環境');
-    }
-    
-    // 方法3: Fallback - 根據系統深/淺模式選擇
+    // 根據系統深/淺模式選擇對應背景色
     const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const fallbackColor = isDark ? '#191919' : '#ffffff';
-    console.log('[背景檢測] ✓ 方法3（備案）- 使用系統主題 - 深色模式:', isDark, '顏色:', fallbackColor);
-    return fallbackColor;
+    const themeColor = isDark ? '#191919' : '#ffffff';
+    return themeColor;
   } catch (e) {
     console.warn('[背景檢測] ✗ 檢測失敗:', e);
-    return '#ffffff'; // 安全 fallback
+    return '#ffffff';
   }
 }
 
-function updateNotionThemeBackground(savedOriginalBg = null) {
+function updateNotionThemeBackground() {
   const themeLayer = document.querySelector('.notion-theme-bg');
-  console.log('[背景更新] themeLayer 元素:', themeLayer);
   
   if (!themeLayer) {
-    console.log('[背景更新] ✗ 找不到 .notion-theme-bg 元素');
     return;
   }
   
-  console.log('[背景更新] isFromNotion():', isFromNotion());
-  console.log('[背景更新] savedOriginalBg:', savedOriginalBg);
-  
   // 只有來自 Notion 時才套用主題檢測
   if (isFromNotion()) {
-    const actualBgColor = detectActualBackgroundColor(savedOriginalBg);
-    console.log('[背景更新] ✓ 偵測到背景色:', actualBgColor);
-    console.log('[背景更新] ✓ 設定 .notion-theme-bg 背景色為:', actualBgColor);
+    const actualBgColor = detectActualBackgroundColor();
     themeLayer.style.background = actualBgColor;
   } else {
     // 非 Notion 環境時，底層設為透明，只顯示用戶自訂背景色
-    console.log('[背景更新] 非 Notion 環境，設定透明背景');
     themeLayer.style.background = 'transparent';
   }
 }
