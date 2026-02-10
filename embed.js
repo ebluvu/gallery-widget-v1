@@ -695,20 +695,41 @@ function isFromNotion() {
   return referrer.includes('notion.so') || referrer.includes('notion.site');
 }
 
+/**
+ * 檢測頁面真實背景色（包括 Notion 區塊背景色）
+ * 通過 getComputedStyle 直接讀取計算後的顏色
+ */
+function detectActualBackgroundColor() {
+  try {
+    // 如果是在 iframe 內，檢查父級元素（Notion 區塊）
+    if (window.frameElement) {
+      const parentElement = window.frameElement.parentElement;
+      if (parentElement) {
+        const bgColor = window.getComputedStyle(parentElement).backgroundColor;
+        // 如果父級有非透明背景色，使用它
+        if (bgColor && bgColor !== 'transparent' && !bgColor.includes('rgba(0, 0, 0, 0)')) {
+          return bgColor;
+        }
+      }
+    }
+    
+    // 如果沒有檢測到區塊背景色，則根據系統深/淺模式選擇
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return isDark ? '#191919' : '#ffffff';
+  } catch (e) {
+    console.warn('背景色檢測失敗:', e);
+    return '#ffffff'; // 安全 fallback
+  }
+}
+
 function updateNotionThemeBackground() {
   const themeLayer = document.querySelector('.notion-theme-bg');
   if (!themeLayer) return;
   
   // 只有來自 Notion 時才套用主題檢測
   if (isFromNotion()) {
-    try {
-      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const notionBg = isDark ? '#191919' : '#ffffff';
-      themeLayer.style.background = notionBg;
-    } catch (e) {
-      // 如果檢測失敗，使用淺色作為預設
-      themeLayer.style.background = '#ffffff';
-    }
+    const actualBgColor = detectActualBackgroundColor();
+    themeLayer.style.background = actualBgColor;
   } else {
     // 非 Notion 環境時，底層設為透明，只顯示用戶自訂背景色
     themeLayer.style.background = 'transparent';
