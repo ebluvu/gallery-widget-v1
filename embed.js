@@ -701,37 +701,58 @@ function isFromNotion() {
  */
 function detectActualBackgroundColor() {
   try {
+    console.log('[背景檢測] 開始檢測背景色...');
+    console.log('[背景檢測] window.frameElement:', window.frameElement);
+    
     // 如果是在 iframe 內，檢查父級元素（Notion 區塊）
     if (window.frameElement) {
       const parentElement = window.frameElement.parentElement;
+      console.log('[背景檢測] 父級元素:', parentElement);
+      
       if (parentElement) {
         const bgColor = window.getComputedStyle(parentElement).backgroundColor;
+        console.log('[背景檢測] 父級背景色:', bgColor);
+        
         // 如果父級有非透明背景色，使用它
         if (bgColor && bgColor !== 'transparent' && !bgColor.includes('rgba(0, 0, 0, 0)')) {
+          console.log('[背景檢測] ✓ 檢測到區塊背景色:', bgColor);
           return bgColor;
         }
       }
+    } else {
+      console.log('[背景檢測] 非 iframe 環境');
     }
     
     // 如果沒有檢測到區塊背景色，則根據系統深/淺模式選擇
     const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return isDark ? '#191919' : '#ffffff';
+    const fallbackColor = isDark ? '#191919' : '#ffffff';
+    console.log('[背景檢測] 使用系統主題作為備案 - 深色模式:', isDark, '顏色:', fallbackColor);
+    return fallbackColor;
   } catch (e) {
-    console.warn('背景色檢測失敗:', e);
+    console.warn('[背景檢測] ✗ 檢測失敗:', e);
     return '#ffffff'; // 安全 fallback
   }
 }
 
 function updateNotionThemeBackground() {
   const themeLayer = document.querySelector('.notion-theme-bg');
-  if (!themeLayer) return;
+  console.log('[背景更新] themeLayer 元素:', themeLayer);
+  
+  if (!themeLayer) {
+    console.log('[背景更新] ✗ 找不到 .notion-theme-bg 元素');
+    return;
+  }
+  
+  console.log('[背景更新] isFromNotion():', isFromNotion());
   
   // 只有來自 Notion 時才套用主題檢測
   if (isFromNotion()) {
     const actualBgColor = detectActualBackgroundColor();
+    console.log('[背景更新] ✓ 設定背景色為:', actualBgColor);
     themeLayer.style.background = actualBgColor;
   } else {
     // 非 Notion 環境時，底層設為透明，只顯示用戶自訂背景色
+    console.log('[背景更新] 非 Notion 環境，設定透明背景');
     themeLayer.style.background = 'transparent';
   }
 }
