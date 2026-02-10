@@ -374,9 +374,15 @@ async function loadAlbum(albumId) {
   // 雙層背景系統：底層是 Notion 主題色，上層是用戶自訂色
   const userBgColor = album.background_color || "#0c1117";
   
-  // 設定上層背景（用戶自訂色，可能是半透明的）
-  document.body.style.background = userBgColor;
-  document.documentElement.style.background = userBgColor;
+  // 設定上層背景（Notion 內盡量使用透明以顯示區塊顏色）
+  if (isFromNotion()) {
+    console.log('[背景更新] Notion 環境，設定透明背景以顯示區塊底色');
+    document.body.style.background = 'transparent';
+    document.documentElement.style.background = 'transparent';
+  } else {
+    document.body.style.background = userBgColor;
+    document.documentElement.style.background = userBgColor;
+  }
   
   // 設定底層 Notion 主題背景（會被主題檢測器更新）
   updateNotionThemeBackground();
@@ -695,6 +701,14 @@ function isFromNotion() {
   return referrer.includes('notion.so') || referrer.includes('notion.site');
 }
 
+function isInIframe() {
+  try {
+    return window.top !== window;
+  } catch (e) {
+    return true;
+  }
+}
+
 /**
  * 檢測頁面真實背景色（包括 Notion 區塊背景色）
  * 通過 getComputedStyle 直接讀取計算後的顏色
@@ -703,6 +717,7 @@ function detectActualBackgroundColor() {
   try {
     console.log('[背景檢測] 開始檢測背景色...');
     console.log('[背景檢測] window.frameElement:', window.frameElement);
+    console.log('[背景檢測] isInIframe():', isInIframe());
     
     // 如果是在 iframe 內，檢查父級元素（Notion 區塊）
     if (window.frameElement) {
@@ -719,9 +734,14 @@ function detectActualBackgroundColor() {
           return bgColor;
         }
       }
-    } else {
-      console.log('[背景檢測] 非 iframe 環境');
     }
+
+    if (isInIframe()) {
+      console.log('[背景檢測] iframe 環境但無法存取 frameElement，回傳透明背景');
+      return 'transparent';
+    }
+
+    console.log('[背景檢測] 非 iframe 環境');
     
     // 如果沒有檢測到區塊背景色，則根據系統深/淺模式選擇
     const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -748,6 +768,9 @@ function updateNotionThemeBackground() {
   // 只有來自 Notion 時才套用主題檢測
   if (isFromNotion()) {
     const actualBgColor = detectActualBackgroundColor();
+    if (actualBgColor === 'transparent') {
+      console.log('[背景更新] 無法取得區塊背景色，使用透明背景');
+    }
     console.log('[背景更新] ✓ 設定背景色為:', actualBgColor);
     themeLayer.style.background = actualBgColor;
   } else {
