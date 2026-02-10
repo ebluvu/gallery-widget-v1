@@ -694,14 +694,6 @@ function isFromNotion() {
   return referrer.includes('notion.so') || referrer.includes('notion.site');
 }
 
-function isInIframe() {
-  try {
-    return window.top !== window;
-  } catch (e) {
-    return true;
-  }
-}
-
 /**
  * 檢測背景色
  * 由於 Notion 跨域限制，無法讀取區塊背景色
