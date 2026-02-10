@@ -749,7 +749,12 @@ function detectActualBackgroundColor(notionBlockColor = 'default') {
 
     if (notionBlockColor === 'default' && isDark) {
       const referrer = document.referrer.toLowerCase();
+      console.log('[DEBUG] document.referrer:', document.referrer);
+      console.log('[DEBUG] referrer lowercase:', referrer);
+      console.log('[DEBUG] includes pm=c:', referrer.includes('pm=c'));
+      console.log('[DEBUG] includes pm=s:', referrer.includes('pm=s'));
       if (referrer.includes('pm=c') || referrer.includes('pm=s')) {
+        console.log('[DEBUG] Using preview mode color #202020');
         return '#202020';
       }
     }
