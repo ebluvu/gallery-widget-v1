@@ -38,16 +38,26 @@
     <div class="brand">
       <div class="logo">🎞️</div>
       <div>
-        <p class="eyebrow">可嵌入的圖庫小工具 | <a href="https://ebluvu.notion.site/2ff642e52df08005b289d1fc521b0259?" style="color: var(--accent)" target="_blank" rel="noopener noreferrer">使用教學</a></p>
+        <p class="eyebrow">可嵌入的圖庫小工具</p>
         <h1>Gallery Widget</h1>
       </div>
     </div>
-    <div class="auth">
-      <div id="signInForm">
-        <button id="openLoginModalBtn" class="btn ghost">登入</button>
+    <div class="header-actions">
+      <details class="resources">
+        <summary class="resources-toggle">資源</summary>
+        <div class="resources-menu" role="menu">
+          <a href="https://ebluvu.notion.site/2ff642e52df08005b289d1fc521b0259" target="_blank" rel="noopener noreferrer">使用教學</a>
+          <a href="https://ebluvu.notion.site/304642e52df080bb8e85da694083c1ae" target="_blank" rel="noopener noreferrer">使用規範</a>
+          <a href="https://ebluvu.notion.site/303642e52df080e68d68e6c7c1ad5e7b" target="_blank" rel="noopener noreferrer">更新紀錄</a>
+        </div>
+      </details>
+      <div class="auth">
+        <div id="signInForm">
+          <button id="openLoginModalBtn" class="btn ghost">登入</button>
+        </div>
+        <button id="signOutBtn" class="btn ghost hidden">登出</button>
+        <div id="userBadge" class="badge"></div>
       </div>
-      <button id="signOutBtn" class="btn ghost hidden">登出</button>
-      <div id="userBadge" class="badge"></div>
     </div>
   </header>
 
