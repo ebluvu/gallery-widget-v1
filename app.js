@@ -238,6 +238,11 @@ async function transferAnonymousAlbums(userId) {
       showToast('成功保留相簿！', 'success');
       // 清除記錄
       localStorage.removeItem('anonymousAlbumId');
+      
+      // 清空當前相簿狀態，因為匿名相簿已經轉移，需要重新選擇
+      state.album = null;
+      state.images = [];
+      ui.imageList.innerHTML = "";
     }
   } catch (e) {
     console.error('處理匿名相簿轉移時發生錯誤:', e);
