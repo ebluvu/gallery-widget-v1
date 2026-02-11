@@ -1,2 +1,24 @@
 # 後台管理頁面（僅供本地使用，不上傳到公開儲存庫）
 admin.html
+
+# macOS 系統檔案
+.DS_Store
+
+# Windows 系統檔案
+Thumbs.db
+desktop.ini
+
+# 編輯器備份檔案
+*~
+*.swp
+*.swo
+
+# Node.js（如果將來使用）
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 環境變數檔案（如果將來使用）
+.env
+.env.local
+.env.*.local
