@@ -63,3 +63,8 @@ logs/
 
 # ========== md檔案 ==========
 *.md
+
+# ========== 其他敏感檔案 ==========
+migrate-to-r2.js
+migrate-to-r2.html
+package.json
