@@ -1,4 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { R2_CONFIG } from './r2-config.js';
 
 const SUPABASE_URL = "https://eooudvssawtdtttrwyfr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_sX69Y-P_n8QgAkrcb8gGtQ_FoKhG9mj";
@@ -15,7 +16,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // 檢查是否為 R2 URL
 function isR2Url(pathOrUrl) {
   if (!pathOrUrl) return false;
-  return pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://');
+  // 檢查是否包含 R2 公開域名
+  return pathOrUrl.includes(R2_CONFIG.publicDomain);
 }
 
 // 圖片URL輔助函數：為預覽生成優化版本，為下載/開啟保留原圖
@@ -24,8 +26,19 @@ function encodeStoragePath(path) {
 }
 
 function getImageUrl(pathOrUrl, options = {}) {
-  // 如果是 R2 的完整 URL，直接返回
+  // 如果是 R2 的完整 URL，可選擇性地轉換為 WebP 格式（只在顯示層面）
   if (isR2Url(pathOrUrl)) {
+    if (options.preview) {
+      // 使用 Worker 的轉換端點來處理 R2 圖片的 WebP 轉換
+      const transformUrl = new URL(`${R2_CONFIG.workerUrl}/transform`);
+      // 從 R2 URL 提取對象鍵
+      const objectKey = pathOrUrl.replace(R2_CONFIG.publicDomain, '').replace(/^\//, '');
+      transformUrl.searchParams.set('key', objectKey);
+      transformUrl.searchParams.set('quality', options.quality || '50');
+      transformUrl.searchParams.set('format', 'webp'); // 總是要求 WebP 用於預覽
+      return transformUrl.toString();
+    }
+    // 原始閱讀時返回完整 URL（保留原始格式）
     return pathOrUrl;
   }
   

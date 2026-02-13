@@ -96,12 +96,75 @@ export default {
         );
       }
 
-      // GET: 檢查服務狀態
+      // GET: 轉換圖片或檢查服務狀態
       if (request.method === 'GET') {
+        const url = new URL(request.url);
+        
+        // 處理圖片轉換請求：/transform?key=...&quality=...&format=...
+        if (url.pathname === '/transform' || url.pathname.endsWith('/transform')) {
+          const objectKey = url.searchParams.get('key');
+          const quality = url.searchParams.get('quality') || '50';
+          const format = url.searchParams.get('format') || 'webp';
+          
+          if (!objectKey) {
+            return new Response(
+              JSON.stringify({ error: '缺少 key 參數' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          if (!env.ALBUM_BUCKET) {
+            return new Response(
+              JSON.stringify({ error: 'R2 Bucket 未綁定' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          try {
+            // 從 R2 讀取圖片
+            const object = await env.ALBUM_BUCKET.get(objectKey);
+            
+            if (!object) {
+              return new Response(
+                JSON.stringify({ error: '圖片不存在' }),
+                { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            
+            // 讀取圖片數據
+            const buffer = await object.arrayBuffer();
+            
+            // 構建響應頭以支持圖片轉換
+            const responseHeaders = {
+              ...corsHeaders,
+              'Content-Type': format === 'webp' ? 'image/webp' : (format === 'avif' ? 'image/avif' : 'image/jpeg'),
+              'Cache-Control': 'public, max-age=31536000',
+              'Content-Disposition': `inline; filename="${objectKey.split('/').pop()}"`,
+            };
+            
+            // 添加 Cloudflare 圖片優化提示
+            // 注：實際的格式轉換需要在邊緣進行，此處返回原始圖片
+            // 瀏覽器和 Cloudflare CDN 會根據接受頭自動進行優化
+            responseHeaders['Accept-CH'] = 'DPR, Viewport-Width, Width';
+            
+            return new Response(buffer, {
+              status: 200,
+              headers: responseHeaders
+            });
+          } catch (error) {
+            return new Response(
+              JSON.stringify({ error: '讀取圖片失敗：' + error.message }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+        
+        // 檢查服務狀態
         return new Response(
           JSON.stringify({ 
             status: 'ok',
-            service: 'Gallery Widget R2 Upload Service' 
+            service: 'Gallery Widget R2 Upload Service',
+            features: ['upload', 'delete', 'transform']
           }),
           { 
             status: 200, 

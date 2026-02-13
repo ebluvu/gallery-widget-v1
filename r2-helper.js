@@ -81,7 +81,8 @@ export async function deleteFromR2(filename) {
  */
 export function isR2Url(pathOrUrl) {
   if (!pathOrUrl) return false;
-  return pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://');
+  // 檢查是否包含 R2 公開域名
+  return pathOrUrl.includes(R2_CONFIG.publicDomain);
 }
 
 /**
