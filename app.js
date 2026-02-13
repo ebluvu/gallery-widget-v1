@@ -4,6 +4,17 @@ const SUPABASE_URL = "https://eooudvssawtdtttrwyfr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_sX69Y-P_n8QgAkrcb8gGtQ_FoKhG9mj";
 const BUCKET = "album";
 const MAX_IMAGE_SIZE = 1600;
+const BYTES_PER_MB = 1024 * 1024;
+const STORAGE_LIMITS = {
+  loggedIn: {
+    perAlbumBytes: 50 * BYTES_PER_MB,
+    totalBytes: 200 * BYTES_PER_MB,
+  },
+  anonymous: {
+    perAlbumBytes: 20 * BYTES_PER_MB,
+    totalBytes: 20 * BYTES_PER_MB,
+  },
+};
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -39,6 +50,7 @@ const state = {
   user: null,
   album: null,
   images: [],
+  quota: null,
 };
 
 let pickr = null;
@@ -114,6 +126,7 @@ const ui = {
   migrationStatus: document.getElementById("migrationStatus"),
   migrationProgressBar: document.getElementById("migrationProgressBar"),
   migrationLog: document.getElementById("migrationLog"),
+  albumQuotaSummary: document.getElementById("albumQuotaSummary"),
 };
 
 // Toast 通知系統
@@ -181,6 +194,208 @@ function newId() {
     .join("");
 }
 
+function getActiveStorageLimits() {
+  return state.user ? STORAGE_LIMITS.loggedIn : STORAGE_LIMITS.anonymous;
+}
+
+function getQuotaMessage(limits) {
+  const perAlbumMb = Math.round(limits.perAlbumBytes / BYTES_PER_MB);
+  const totalMb = Math.round(limits.totalBytes / BYTES_PER_MB);
+  return `用量不足，請刪除相簿或圖片來釋出容量（單一相簿 ${perAlbumMb}MB，總容量 ${totalMb}MB）。`;
+}
+
+function formatMb(bytes) {
+  const value = bytes / BYTES_PER_MB;
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded.toFixed(rounded % 1 === 0 ? 0 : 1)}MB`;
+}
+
+function formatQuotaText(usedBytes, maxBytes) {
+  return `${formatMb(usedBytes)} / ${formatMb(maxBytes)}`;
+}
+
+function updateQuotaSummaryDisplay(totalBytes, limits) {
+  if (!ui.albumQuotaSummary) {
+    return;
+  }
+  if (!state.user) {
+    ui.albumQuotaSummary.textContent = "";
+    ui.albumQuotaSummary.classList.remove("quota-over");
+    return;
+  }
+  ui.albumQuotaSummary.textContent = `（總用量 ${formatQuotaText(totalBytes, limits.totalBytes)}）`;
+  ui.albumQuotaSummary.classList.toggle("quota-over", totalBytes > limits.totalBytes);
+}
+
+function updateAlbumQuotaDisplay(albumId, usedBytes, limits) {
+  const card = ui.albumList.querySelector(`[data-album-id="${albumId}"]`);
+  if (!card) {
+    return;
+  }
+  const quotaEl = card.querySelector(".album-quota");
+  if (quotaEl) {
+    quotaEl.textContent = `（${formatQuotaText(usedBytes, limits.perAlbumBytes)}）`;
+    quotaEl.classList.toggle("quota-over", usedBytes > limits.perAlbumBytes);
+  }
+}
+
+function warnOverQuotaIfNeeded(usage, limits, albumIds) {
+  const overTotal = usage.totalBytes > limits.totalBytes;
+  const overAlbums = albumIds.filter(
+    (albumId) => (usage.byAlbumId[albumId] || 0) > limits.perAlbumBytes
+  );
+
+  if (overTotal || overAlbums.length > 0) {
+    const hint = overTotal && overAlbums.length > 0
+      ? "相簿總用量與部分相簿皆超過限制"
+      : (overTotal ? "相簿總用量已超過限制" : "部分相簿已超過限制");
+    if (shouldShowQuotaWarning()) {
+      showToast(`提醒：${hint}，建議清理相簿以釋出空間。`, 'warning', 7000);
+    }
+  }
+}
+
+function shouldShowQuotaWarning() {
+  const key = "galleryWidgetQuotaWarningAt";
+  const intervalMs = 24 * 60 * 60 * 1000;
+  try {
+    const lastValue = localStorage.getItem(key);
+    const lastAt = lastValue ? Number(lastValue) : 0;
+    if (Number.isFinite(lastAt) && Date.now() - lastAt < intervalMs) {
+      return false;
+    }
+    localStorage.setItem(key, String(Date.now()));
+  } catch (error) {
+    console.warn("無法寫入用量提醒節流狀態:", error);
+  }
+  return true;
+}
+
+function getAnonymousAlbumId() {
+  return state.album?.id || localStorage.getItem('anonymousAlbumId');
+}
+
+function getObjectSizeBytes(item) {
+  const metadata = item?.metadata || {};
+  const size = metadata.size ?? metadata.contentLength ?? metadata["content-length"];
+  return Number.isFinite(size) ? size : 0;
+}
+
+async function listAllStorageObjects(prefix) {
+  const objects = [];
+  let offset = 0;
+  const limit = 1000;
+
+  while (true) {
+    const { data, error } = await supabase.storage.from(BUCKET).list(prefix, {
+      limit,
+      offset,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    objects.push(...data);
+
+    if (data.length < limit) {
+      break;
+    }
+
+    offset += data.length;
+  }
+
+  return objects;
+}
+
+async function getUsageSnapshot(targetAlbumId) {
+  let albumIds = [];
+
+  if (state.user) {
+    const { data, error } = await supabase
+      .from("albums")
+      .select("id")
+      .eq("owner_id", state.user.id);
+
+    if (error) {
+      throw error;
+    }
+
+    albumIds = (data || []).map((album) => album.id);
+  } else {
+    const anonymousAlbumId = getAnonymousAlbumId();
+    if (anonymousAlbumId) {
+      albumIds = [anonymousAlbumId];
+    }
+  }
+
+  let totalBytes = 0;
+  let albumBytes = 0;
+
+  for (const albumId of albumIds) {
+    const objects = await listAllStorageObjects(albumId);
+    const bytes = objects.reduce((sum, item) => sum + getObjectSizeBytes(item), 0);
+    totalBytes += bytes;
+    if (albumId === targetAlbumId) {
+      albumBytes = bytes;
+    }
+  }
+
+  return { totalBytes, albumBytes };
+}
+
+async function getUsageForAlbums(albumIds) {
+  const byAlbumId = {};
+  let totalBytes = 0;
+
+  for (const albumId of albumIds) {
+    const objects = await listAllStorageObjects(albumId);
+    const bytes = objects.reduce((sum, item) => sum + getObjectSizeBytes(item), 0);
+    byAlbumId[albumId] = bytes;
+    totalBytes += bytes;
+  }
+
+  return { totalBytes, byAlbumId };
+}
+
+async function refreshQuotaForLoggedIn(albums) {
+  if (!state.user) {
+    return;
+  }
+
+  const limits = getActiveStorageLimits();
+  let albumList = albums;
+
+  if (!albumList) {
+    const { data, error } = await supabase
+      .from("albums")
+      .select("id")
+      .eq("owner_id", state.user.id);
+
+    if (error) {
+      console.warn("無法取得相簿用量:", error);
+      return;
+    }
+
+    albumList = data || [];
+  }
+
+  const albumIds = albumList.map((album) => album.id);
+  const usage = await getUsageForAlbums(albumIds);
+  state.quota = usage;
+  updateQuotaSummaryDisplay(usage.totalBytes, limits);
+
+  albumIds.forEach((albumId) => {
+    updateAlbumQuotaDisplay(albumId, usage.byAlbumId[albumId] || 0, limits);
+  });
+
+  warnOverQuotaIfNeeded(usage, limits, albumIds);
+}
+
 function currentEmbedUrl() {
   if (!state.album) {
     return "";
@@ -210,6 +425,7 @@ function renderAuth() {
     ui.signOutBtn.classList.add("hidden");
     ui.userBadge.textContent = "未登入";
     document.getElementById("albumSection").classList.add("hidden");
+    updateQuotaSummaryDisplay(0, getActiveStorageLimits());
   }
 }
 
@@ -219,6 +435,20 @@ async function transferAnonymousAlbums(userId) {
     const anonymousAlbumId = localStorage.getItem('anonymousAlbumId');
     
     if (!anonymousAlbumId) {
+      return;
+    }
+    
+    // 先檢查相簿是否真的存在且是匿名相簿
+    const { data: album, error: fetchError } = await supabase
+      .from('albums')
+      .select('id, owner_id')
+      .eq('id', anonymousAlbumId)
+      .is('owner_id', null)
+      .single();
+    
+    // 如果相簿不存在或已經有 owner，靜默清除記錄
+    if (fetchError || !album) {
+      localStorage.removeItem('anonymousAlbumId');
       return;
     }
     
@@ -234,6 +464,8 @@ async function transferAnonymousAlbums(userId) {
     if (error) {
       console.error('轉移匿名相簿失敗:', error);
       showToast('轉移相簿時發生錯誤', 'error');
+      // 清除記錄避免重複嘗試
+      localStorage.removeItem('anonymousAlbumId');
     } else {
       showToast('成功保留相簿！', 'success');
       // 清除記錄
@@ -246,6 +478,8 @@ async function transferAnonymousAlbums(userId) {
     }
   } catch (e) {
     console.error('處理匿名相簿轉移時發生錯誤:', e);
+    // 清除記錄避免重複嘗試
+    localStorage.removeItem('anonymousAlbumId');
   }
 }
 
@@ -282,6 +516,21 @@ async function loadAlbums() {
     info.textContent = "尚無相簿。上傳圖片會自動建立新相簿。";
     ui.albumList.appendChild(info);
   }
+
+  const limits = getActiveStorageLimits();
+  let usageByAlbumId = {};
+  let totalUsageBytes = 0;
+
+  try {
+    const usage = await getUsageForAlbums(albums.map((album) => album.id));
+    usageByAlbumId = usage.byAlbumId;
+    totalUsageBytes = usage.totalBytes;
+    state.quota = usage;
+  } catch (error) {
+    console.warn('無法取得用量資訊:', error);
+  }
+
+  updateQuotaSummaryDisplay(totalUsageBytes, limits);
 
   for (const album of albums) {
     // 获取该相册的前5张图片
@@ -335,6 +584,11 @@ async function loadAlbums() {
       }
     });
 
+    const quota = document.createElement("div");
+    quota.className = "album-quota";
+    const albumBytes = usageByAlbumId[album.id] || 0;
+    quota.textContent = `（${formatQuotaText(albumBytes, limits.perAlbumBytes)}）`;
+
     // 删除按钮
     const actions = document.createElement("div");
     actions.className = "album-actions";
@@ -371,9 +625,14 @@ async function loadAlbums() {
 
     card.appendChild(preview);
     card.appendChild(input);
+    card.appendChild(quota);
     card.appendChild(actions);
     ui.albumList.appendChild(card);
+
+    updateAlbumQuotaDisplay(album.id, albumBytes, limits);
   }
+
+  warnOverQuotaIfNeeded({ totalBytes: totalUsageBytes, byAlbumId: usageByAlbumId }, limits, albums.map((album) => album.id));
 
   // 只在有相簿時才顯示建立相簿按鈕
   if (albums.length > 0) {
@@ -958,6 +1217,11 @@ async function deleteImage(image) {
     }
     return;
   }
+
+  if (state.user) {
+    await refreshQuotaForLoggedIn();
+  }
+
   updateEmbed();
 }
 
@@ -1128,6 +1392,19 @@ async function uploadImages(files) {
     }
   }
 
+  const limits = getActiveStorageLimits();
+  let usageSnapshot;
+  try {
+    usageSnapshot = await getUsageSnapshot(state.album.id);
+  } catch (error) {
+    console.error('取得用量失敗:', error);
+    setStatus("無法取得用量資訊，請稍後再試。", 'error');
+    return;
+  }
+
+  let totalBytes = usageSnapshot.totalBytes;
+  let albumBytes = usageSnapshot.albumBytes;
+
   const baseOrder = state.images.length
     ? state.images[state.images.length - 1].sort_order
     : 0;
@@ -1143,6 +1420,16 @@ async function uploadImages(files) {
 
     setStatus(`處理中 ${file.name}...`, 'info');
     const { blob, width, height, extension } = await prepareImage(file);
+    const additionalBytes = blob.size;
+
+    if (
+      albumBytes + additionalBytes > limits.perAlbumBytes ||
+      totalBytes + additionalBytes > limits.totalBytes
+    ) {
+      setStatus(getQuotaMessage(limits), 'warning');
+      return;
+    }
+
     const path = `${state.album.id}/${newId()}.${extension}`;
     const contentType = extension === "png" ? "image/png" : "image/jpeg";
 
@@ -1174,6 +1461,9 @@ async function uploadImages(files) {
       return;
     }
 
+    albumBytes += additionalBytes;
+    totalBytes += additionalBytes;
+
     logUpload(`已上傳 ${file.name}`);
   }
 
@@ -1181,6 +1471,11 @@ async function uploadImages(files) {
   // 只有登入用戶才更新相簿卡片（匿名用戶不需要相簿管理功能）
   if (state.user && state.album) {
     await updateAlbumCardPreview(state.album.id);
+    state.quota = state.quota || { totalBytes: 0, byAlbumId: {} };
+    state.quota.totalBytes = totalBytes;
+    state.quota.byAlbumId[state.album.id] = albumBytes;
+    updateQuotaSummaryDisplay(totalBytes, limits);
+    updateAlbumQuotaDisplay(state.album.id, albumBytes, limits);
   }
   updateEmbed();
   setStatus("上傳完成。", 'success');
@@ -1477,6 +1772,18 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
     // 3. 下載並上傳每張圖片
     let successCount = 0;
     let failCount = 0;
+    let quotaReached = false;
+
+    const limits = getActiveStorageLimits();
+    let usageSnapshot;
+    try {
+      usageSnapshot = await getUsageSnapshot(album.id);
+    } catch (error) {
+      throw new Error('無法取得用量資訊');
+    }
+
+    let totalBytes = usageSnapshot.totalBytes;
+    let albumBytes = usageSnapshot.albumBytes;
 
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
@@ -1488,6 +1795,17 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
         const file = new File([blob], fileName, { type: blob.type });
 
         const { blob: processedBlob, width, height, extension } = await prepareImage(file);
+        const additionalBytes = processedBlob.size;
+
+        if (
+          albumBytes + additionalBytes > limits.perAlbumBytes ||
+          totalBytes + additionalBytes > limits.totalBytes
+        ) {
+          addMigrationLog(getQuotaMessage(limits), 'error');
+          quotaReached = true;
+          break;
+        }
+
         const path = `${album.id}/${newId()}.${extension}`;
         const contentType = extension === "png" ? "image/png" : "image/jpeg";
 
@@ -1514,12 +1832,18 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
         if (insertError) throw insertError;
 
         successCount++;
+        albumBytes += additionalBytes;
+        totalBytes += additionalBytes;
         const captionInfo = image.caption ? ` "${image.caption}"` : '';
         addMigrationLog(`✓ [${imageIndex}/${images.length}]${captionInfo}`, 'success');
         updateMigrationProgress(albumIndex - 1 + (imageIndex / images.length), totalAlbums);
       } catch (error) {
         failCount++;
         addMigrationLog(`✗ [${imageIndex}/${images.length}] ${error.message}`, 'error');
+      }
+
+      if (quotaReached) {
+        break;
       }
     }
 
@@ -1528,6 +1852,10 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
       `✓ 相簿遷移完成！成功: ${successCount}/${images.length} 張圖片`,
       'success'
     );
+
+    if (quotaReached) {
+      addMigrationLog('已達用量上限，停止遷移。', 'warning');
+    }
 
     // 重新載入相簿列表
     await loadAlbums();
