@@ -13,11 +13,19 @@
 </head>
 <body>
   <script>
-    // 立即重定向到新域名的嵌入頁面，保留所有 URL 參數
+    // 立即重定向到新域名的嵌入頁面，保留所有 URL 參數和 referrer 資訊
     (function() {
       const newBaseUrl = 'https://gallery-widget.github.io/embed.html';
-      const currentParams = window.location.search;
-      const newUrl = newBaseUrl + currentParams;
+      const currentParams = new URLSearchParams(window.location.search);
+      
+      // 保留原始 referrer 資訊（用於 Notion 主題偵測）
+      const originalReferrer = document.referrer;
+      if (originalReferrer) {
+        // 將 referrer 編碼後加入 URL 參數
+        currentParams.set('ref', encodeURIComponent(originalReferrer));
+      }
+      
+      const newUrl = newBaseUrl + '?' + currentParams.toString();
       
       // 如果在 iframe 中，嘗試重定向父窗口
       if (window.self !== window.top) {

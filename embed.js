@@ -760,7 +760,20 @@ function renderThumbnail(album, images) {
 
 // Notion 主題檢測與背景設定
 function isFromNotion() {
-  // 檢查 referrer 是否來自 Notion
+  // 優先檢查 URL 參數中的 ref（用於處理重定向情況）
+  const urlParams = new URLSearchParams(window.location.search);
+  const refParam = urlParams.get('ref');
+  
+  if (refParam) {
+    try {
+      const decodedRef = decodeURIComponent(refParam).toLowerCase();
+      return decodedRef.includes('notion.so') || decodedRef.includes('notion.site');
+    } catch (e) {
+      // 解碼失敗，繼續檢查原始 referrer
+    }
+  }
+  
+  // 檢查原始 referrer
   const referrer = document.referrer.toLowerCase();
   return referrer.includes('notion.so') || referrer.includes('notion.site');
 }
