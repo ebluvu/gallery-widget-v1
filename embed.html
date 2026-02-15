@@ -3,26 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>圖庫小工具 - Gallery Widget</title>
+  <title>網頁已遷移 - Gallery Widget</title>
   
   <!-- SEO Meta Tags -->
-  <meta name="description" content="Gallery Widget 嵌入式圖庫展示" />
+  <meta name="description" content="Gallery Widget 嵌入頁面已遷移" />
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@300;400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2" />
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎞️</text></svg>" />
 </head>
-<body class="embed">
-  <!-- Notion 主題背景層（底層） -->
-  <div class="notion-theme-bg" aria-hidden="true"></div>
+<body>
+  <script>
+    // 立即重定向到新域名的嵌入頁面，保留所有 URL 參數
+    (function() {
+      const newBaseUrl = 'https://gallery-widget.github.io/embed.html';
+      const currentParams = window.location.search;
+      const newUrl = newBaseUrl + currentParams;
+      
+      // 如果在 iframe 中，嘗試重定向父窗口
+      if (window.self !== window.top) {
+        try {
+          window.top.location.href = newUrl;
+        } catch (e) {
+          // 如果無法存取父窗口（跨域），只重定向當前 iframe
+          window.location.href = newUrl;
+        }
+      } else {
+        // 非 iframe 環境，直接重定向
+        window.location.href = newUrl;
+      }
+    })();
+  </script>
   
-  <div class="embed-shell">
-    <div id="embedGrid" class="embed-grid"></div>
-  </div>
-
-  <script type="module" src="embed.js?v=20260207-1"></script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=https://gallery-widget.github.io/embed.html" />
+    <p style="text-align:center;padding:50px;font-family:sans-serif;">
+      頁面已遷移至 <a href="https://gallery-widget.github.io/embed.html">新網站</a>
+    </p>
+  </noscript>
 </body>
 </html>
