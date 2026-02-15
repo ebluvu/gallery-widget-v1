@@ -162,6 +162,16 @@
   </style>
 </head>
 <body>
+  <script>
+    // 清除所有舊域名的儲存數據，避免與新域名衝突
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('無法清除儲存數據:', e);
+    }
+  </script>
+  
   <div class="migration-notice">
     <div class="logo">🎞️</div>
     <h1>⚠️ 網站已遷移</h1>

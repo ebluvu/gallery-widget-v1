@@ -15,6 +15,15 @@
   <script>
     // 立即重定向到新域名的嵌入頁面，保留所有 URL 參數和 referrer 資訊
     (function() {
+      // 清除所有舊域名的儲存數據，避免污染新域名
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        // 某些瀏覽器在 iframe 中可能無法訪問 storage
+        console.warn('無法清除儲存數據:', e);
+      }
+      
       const newBaseUrl = 'https://gallery-widget.github.io/embed.html';
       const currentParams = new URLSearchParams(window.location.search);
       
