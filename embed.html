@@ -15,9 +15,16 @@
   <script>
     // 立即重定向到新域名的嵌入頁面，保留所有 URL 參數和 referrer 資訊
     (function() {
-      // 清除所有舊域名的儲存數據，避免污染新域名
+      // 清理 Supabase session，防止污染新域名
       try {
-        localStorage.clear();
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
         sessionStorage.clear();
       } catch (e) {
         // 某些瀏覽器在 iframe 中可能無法訪問 storage

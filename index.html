@@ -163,13 +163,22 @@
 </head>
 <body>
   <script>
-    // 清除所有舊域名的儲存數據，避免與新域名衝突
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-    } catch (e) {
-      console.warn('無法清除儲存數據:', e);
-    }
+    // 清理 Supabase session，防止污染新域名
+    (function() {
+      try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        sessionStorage.clear();
+      } catch (e) {
+        console.warn('無法清除儲存數據:', e);
+      }
+    })();
   </script>
   
   <div class="migration-notice">
